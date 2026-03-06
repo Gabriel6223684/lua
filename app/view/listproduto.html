@@ -53,12 +53,13 @@
                                 <table class="table table-dark table-hover align-middle mb-0" id="tabela">
                                     <thead class="bg-black text-white-50 small">
                                         <tr class="border-secondary">
-                                            <th class="ps-4 py-3" style="width: 120px;">CÓDIGO</th>
+                                            <th class="ps-4 py-3" style="width: 80px;">CÓDIGO</th>
                                             <th>NOME DO PRODUTO</th>
                                             <th>DESCRIÇÃO CURTA</th>
                                             <th>CÓD. BARRAS</th>
-                                            <th>VALOR</th>
-                                            <th class="text-center" style="width: 150px;">AÇÕES</th>
+                                            <th class="text-center" style="width: 100px;">ESTOQUE</th>
+                                            <th class="text-end" style="width: 120px;">VALOR</th>
+                                            <th class="text-center" style="width: 200px;">AÇÕES</th>
                                         </tr>
                                     </thead>
                                     <tbody class="small text-white-50 border-top-0">
@@ -73,6 +74,40 @@
                     </div>
                 </form>
 
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Ajuste de Estoque -->
+<div class="modal fade" id="modalAdjustStock" tabindex="-1" aria-labelledby="modalAdjustStockLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content bg-dark text-white border-secondary">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title" id="modalAdjustStockLabel">
+                    <i class="bi bi-box-seam me-2"></i>Ajuste de Estoque
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="id" name="id">
+                <input type="hidden" id="estoqueAtual" name="estoqueAtual">
+                
+                <div class="mb-3">
+                    <label class="form-label text-white-50">Estoque Atual</label>
+                    <div id="estoqueAtualLabel" class="fw-bold text-white fs-5">-</div>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="novaQuantidade" class="form-label text-white-50">Nova Quantidade</label>
+                    <input type="number" class="form-control bg-dark text-white border-secondary" id="novaQuantidade" placeholder="Digite a nova quantidade" min="0" required>
+                </div>
+            </div>
+            <div class="modal-footer border-secondary">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="SaveStockAdjust()">
+                    <i class="bi bi-check-circle me-1"></i>Salvar
+                </button>
             </div>
         </div>
     </div>

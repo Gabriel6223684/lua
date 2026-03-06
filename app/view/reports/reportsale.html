@@ -24,7 +24,7 @@
 
         /* Cabeçalho Personalizado */
         .report-header {
-            border-bottom: 2px solid #28a745; /* Verde para remeter a produtos/vendas */
+            border-bottom: 2px solid #28a745;
             margin-bottom: 30px;
             padding-bottom: 20px;
             display: flex;
@@ -54,10 +54,12 @@
             background-color: rgba(40, 167, 69, 0.03);
         }
 
-        .barcode-text {
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 0.9rem;
-            color: #666;
+        .id-badge {
+            background-color: #e9ecef;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-family: monospace;
+            color: #333;
         }
 
         .price-tag {
@@ -87,7 +89,7 @@
         <header class="report-header">
             <div class="report-title">
                 <h2>{{ titulo }}</h2>
-                <p class="text-muted mb-0">Catálogo Geral de Produtos e Preços</p>
+                <p class="text-muted mb-0">Demonstrativo de Vendas Realizadas</p>
             </div>
             <div class="text-right d-none d-sm-block">
                 <small class="d-block text-muted">Emissão: {{ "now"|date("d/m/Y H:i") }}</small>
@@ -99,32 +101,46 @@
             <table class="table table-hover table-striped">
                 <thead>
                     <tr>
-                        <th width="150">Cód. Barras</th>
-                        <th>Nome / Descrição</th>
-                        <th width="140" class="text-right">Valor</th>
+                        <th width="80" class="text-center">Cód.</th>
+                        <th>Cliente</th>
+                        <th width="120" class="text-right">Bruto</th>
+                        <th width="100" class="text-right">Desconto</th>
+                        <th width="120" class="text-right">Líquido</th>
+                        <th>Observação</th>
+                        <th width="140">Data/Hora</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {# O nome aqui deve ser igual ao que está no seu array $dadosTemplate #}
-                    {% for item in produtos %}
+                    {% for venda in vendas %}
                     <tr>
-                        <td class="align-middle barcode-text">
-                            {{ item.codigo_barra }}
+                        <td class="text-center align-middle">
+                            <span class="id-badge font-weight-bold">{{ venda.id }}</span>
                         </td>
-                        <td class="align-middle">
-                            <div class="font-weight-bold text-dark">{{ item.nome }}</div>
-                            <small class="text-muted">{{ item.descricao_curta }}</small>
+                        <td class="align-middle font-weight-bold text-dark">
+                            {{ venda.cliente }}
+                        </td>
+                        <td class="align-middle text-right">
+                            R$ {{ venda.total_bruto|number_format(2, ',', '.') }}
+                        </td>
+                        <td class="align-middle text-right text-danger">
+                            - R$ {{ venda.desconto|number_format(2, ',', '.') }}
                         </td>
                         <td class="align-middle text-right">
                             <span class="price-tag text-success">
-                                R$ {{ item.valor|number_format(2, ',', '.') }}
+                                R$ {{ venda.total_liquido|number_format(2, ',', '.') }}
                             </span>
+                        </td>
+                        <td class="align-middle text-secondary">
+                            {{ venda.observacao }}
+                        </td>
+                        <td class="align-middle">
+                            {{ venda.data }}
                         </td>
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="3" class="text-center py-5 text-muted">
-                            <em>Nenhum produto localizado no banco de dados.</em>
+                        <td colspan="7" class="text-center py-5 text-muted">
+                            <em>Nenhuma venda localizada no banco de dados.</em>
                         </td>
                     </tr>
                     {% endfor %}
@@ -135,13 +151,16 @@
         <footer class="footer-info d-flex justify-content-between align-items-center">
             <div>
                 <span class="badge badge-success p-2">
-                    Total de Produtos: {{ total }}
+                    Total de Vendas: {{ total }}
                 </span>
             </div>
-            <div class="text-muted small">
-                Página 1 de 1
+            <div class="text-muted">
+                Documento Gerado Automaticamente
             </div>
         </footer>
+    </div>
+</div>
 
 </body>
 </html>
+

@@ -1,53 +1,90 @@
 {% extends "main.html" %}
 
 {% block main %}
-<div class="app-content-header">
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+
+<div class="app-content-header py-4">
     <div class="container-fluid">
-        <div class="row">
+        <div class="row align-items-center mb-4">
             <div class="col-sm-6">
-                <h3 class="mb-0">{{titulo}}</h3>
+                <h3 class="fw-bold text-white mb-0">
+                    <i class="bi bi-cart-check me-2" style="color: rgb(68, 4, 252);"></i>Gestão de Vendas
+                </h3>
             </div>
             <div class="col-sm-6">
-                <ol class="breadcrumb float-sm-end">
-                    <li class="breadcrumb-item" aria-current="page"><a href="/home">Início</a></li>
-                    <li class="breadcrumb-item active" aria-current="page">Vendas</li>
-                </ol>
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb float-sm-end bg-dark border border-secondary p-2 px-3 rounded-pill shadow-sm small">
+                        <li class="breadcrumb-item"><a href="/home" class="text-decoration-none text-white-50">Início</a></li>
+                        <li class="breadcrumb-item active text-white" aria-current="page">Vendas</li>
+                    </ol>
+                </nav>
             </div>
         </div>
+
         <div class="row">
-            <div class="col-12">
+            <div class="col-12 col-xl-11 mx-auto">
+                
                 <form id="form">
-                    <input type="hidden" id="acao" name="acao" value="{{acao}}">
-                    <input type="hidden" id="id" name="id" value="{{id}}">
-                    <div class="card">
-                        <div class="card-header">
-                            <a href="/venda/cadastro" class="btn btn-primary">
-                                <i class="fa-solid fa-plus"></i>
-                                Nova venda
-                            </a>
-                        </div>
-                        <div class="card-body">
-                            <div class="row">
-                                <div class="input-group">
-                                    <select class="form-select" id="select-field"
-                                        aria-label="Example select with button addon">
-                                        <option selected>Choose...</option>
-                                        <option value="1">One</option>
-                                        <option value="2">Two</option>
-                                        <option value="3">Three</option>
-                                    </select>
-                                    <button class="btn btn-outline-secondary" type="button">Button</button>
+                    <input type="hidden" id="id" name="id">
+                    <input type="hidden" id="acao" name="acao">
+
+                    <div class="card bg-dark border-secondary shadow-lg">
+                        <div class="card-header bg-dark py-3 border-bottom border-secondary">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h6 class="m-0 fw-bold text-white-50 text-uppercase small" style="letter-spacing: 1px;">Relação de Vendas</h6>
+
+                                <div class="d-flex gap-2">
+                                    <a href="/venda/print" target="_blank"
+                                        class="btn btn-outline-light btn-sm rounded-pill px-3 shadow-sm fw-bold d-flex align-items-center gap-2 border-secondary">
+                                        <i class="bi bi-printer" style="color: rgb(68, 4, 252);"></i> Imprimir
+                                    </a>
+
+                                    <a href="/venda/cadastro"
+                                        class="btn btn-sm rounded-pill px-3 shadow-sm fw-bold d-flex align-items-center gap-2 text-white"
+                                        style="background-color: rgb(68, 4, 252); border: none;">
+                                        <i class="bi bi-plus-circle-fill"></i> Nova Venda
+                                    </a>
                                 </div>
                             </div>
                         </div>
+
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-dark table-hover align-middle mb-0" id="tabela">
+                                    <thead class="bg-black text-white-50 small">
+                                        <tr class="border-secondary">
+                                            <th class="ps-4 py-3" style="width: 80px;">CÓDIGO</th>
+                                            <th>CLIENTE</th>
+                                            <th>BRUTO</th>
+                                            <th>DESCONTO</th>
+                                            <th>LÍQUIDO</th>
+                                            <th>OBSERVAÇÃO</th>
+                                            <th>DATA</th>
+                                            <th class="text-center" style="width: 150px;">AÇÕES</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="small text-white-50 border-top-0">
+                                        </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="card-footer bg-dark border-top border-secondary py-3">
+                            <span class="text-white-50 small">Mostrando vendas cadastradas no sistema. Pressione F4 para pesquisar.</span>
+                        </div>
                     </div>
                 </form>
+
             </div>
         </div>
     </div>
 </div>
+
 {% endblock %}
+
 {% block script %}
-{% include 'script.html' %}
+{% include "script.html" %}
 <script defer type="module" src="/js/listsale.js"></script>
 {% endblock %}
+

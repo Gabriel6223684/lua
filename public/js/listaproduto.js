@@ -21,13 +21,28 @@ const tabela = new $('#tabela').DataTable({
     },
     columnDefs: [
         {
-            targets: [4],
+            targets: [5],
             render: function (data, type, row) {
                 if (type === 'display') {
                     return parseFloat(data).toLocaleString('pt-BR', {
                         style: 'currency',
                         currency: 'BRL'
                     });
+                }
+                return data;
+            }
+        },
+        {
+            targets: [4],
+            render: function (data, type, row) {
+                if (type === 'display') {
+                    const estoque = parseInt(data);
+                    let badgeClass = 'bg-secondary';
+                    if (estoque > 10) badgeClass = 'bg-success';
+                    else if (estoque > 0) badgeClass = 'bg-warning text-dark';
+                    else badgeClass = 'bg-danger';
+                    
+                    return `<span class="badge ${badgeClass}">${estoque}</span>`;
                 }
                 return data;
             }
@@ -68,4 +83,75 @@ async function Delete(id) {
     tabela.ajax.reload();
 }
 
+function AdjustStock(id, currentStock) {
+    document.getElementById('id').value = id;
+    document.getElementById('estoqueAtual').value = currentStock;
+    document.getElementById('estoqueAtualLabel').textContent = `Estoque Atual: ${currentStock}`;
+    
+    const modal = new bootstrap.Modal(document.getElementById('modalAdjustStock'));
+    modal.show();
+}
+
+async function SaveStockAdjust() {
+    const id = document.getElementById('id').value;
+    const newStock = document.getElementById('novaQuantidade').value;
+    
+    if (!newStock || newStock < 0) {
+        Swal.fire({
+            title: "Erro!",
+            icon: "error",
+            html: "Por favor, informe uma quantidade válida.",
+            timer: 3000,
+            timerProgressBar: true
+        });
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('id', id);
+    formData.append('quantidade', newStock);
+    
+    try {
+        const response = await fetch('/produto/adjuststock', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const result = await response.json();
+        
+        if (!result.status) {
+            Swal.fire({
+                title: "Erro!",
+                icon: "error",
+                html: result.msg,
+                timer: 3000,
+                timerProgressBar: true
+            });
+            return;
+        }
+        
+        Swal.fire({
+            title: "Sucesso!",
+            icon: "success",
+            html: result.msg,
+            timer: 3000,
+            timerProgressBar: true
+        });
+        
+        bootstrap.Modal.getInstance(document.getElementById('modalAdjustStock')).hide();
+        tabela.ajax.reload();
+        
+    } catch (error) {
+        Swal.fire({
+            title: "Erro!",
+            icon: "error",
+            html: "Erro ao ajustar estoque: " + error.message,
+            timer: 3000,
+            timerProgressBar: true
+        });
+    }
+}
+
 window.Delete = Delete;
+window.AdjustStock = AdjustStock;
+window.SaveStockAdjust = SaveStockAdjust;

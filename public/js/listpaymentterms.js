@@ -1,3 +1,66 @@
+// Função para editar registro
+function Editar(id) {
+    window.location.href = '/pagamento/alterar/' + id;
+}
+
+// Função para excluir registro
+async function Delete(id) {
+    const result = await Swal.fire({
+        title: 'Tem certeza?',
+        text: "Você não poderá reverter isso!",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'Sim, excluir!',
+        cancelButtonText: 'Cancelar'
+    });
+
+    if (result.isConfirmed) {
+        try {
+            const formData = new FormData();
+            formData.append('id', id);
+
+            const response = await fetch('/pagamento/delete', {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+
+            if (data.status) {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Excluído!',
+                    text: data.msg,
+                    timer: 2000,
+                    timerProgressBar: true
+                });
+                // Recarrega a página após exclusão
+                setTimeout(() => {
+                    window.location.reload();
+                }, 2000);
+            } else {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Erro!',
+                    text: data.msg
+                });
+            }
+        } catch (error) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Erro!',
+                text: 'Ocorreu um erro ao excluir o registro.'
+            });
+        }
+    }
+}
+
+// Expõe as funções para o escopo global
+window.Editar = Editar;
+window.Delete = Delete;
+
 const conf = {
     paging: true,
     lengthChange: true,

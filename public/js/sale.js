@@ -4,6 +4,7 @@ import { Requests } from "./Requests.js";
 const Action = document.getElementById("acao");
 const Id = document.getElementById("id");
 const insertItemButton = document.getElementById("insertItemButton");
+
 // Atualizar relógio em tempo real
 function updateClock() {
   const now = new Date();
@@ -49,8 +50,10 @@ function updateClock() {
     dateElement.textContent = `${dayName}, ${day} De ${month} De ${year}`;
   }
 }
+
 // Atualizar a cada segundo
 setInterval(updateClock, 1000);
+
 //Insere uma nova venda
 async function InsertSale() {
   const valid = Validate.SetForm("form").Validate();
@@ -93,6 +96,7 @@ async function InsertSale() {
     });
   }
 }
+
 async function InsertItemSale() {
   const valid = Validate.SetForm("form").Validate();
   if (!valid) {
@@ -127,7 +131,8 @@ async function InsertItemSale() {
     });
   }
 }
-//
+
+//Função para listar itens da venda
 async function listItemSale() {
   try {
     const response = await Requests.SetForm("form").Post("/venda/listitemsale");
@@ -141,8 +146,9 @@ async function listItemSale() {
       });
       return;
     }
-    let total_liquido = parseFloat(response?.sale?.total_liquido);
-    let total_bruto = parseFloat(response?.sale?.total_bruto);
+
+    let total_liquido = parseFloat(response?.sale?.total_liquido || 0);
+    let total_bruto = parseFloat(response?.sale?.total_bruto || 0);
 
     document.getElementById("total-amount").innerText =
       total_liquido.toLocaleString("pt-BR", {
@@ -157,9 +163,10 @@ async function listItemSale() {
         currency: "BRL",
       },
     );
+
     let trs = "";
     response.data.forEach((item) => {
-      let total_liquido = parseFloat(item?.total_liquido).toLocaleString(
+      let valorItem = parseFloat(item?.total_liquido || 0).toLocaleString(
         "pt-BR",
         {
           style: "currency",
@@ -170,34 +177,86 @@ async function listItemSale() {
                 <tr>
                     <td>${item.id}</td>
                     <td>${item.nome}</td>
-                    <td>${total_liquido}</td>
+                    <td>${valorItem}</td>
                     <td>
-                        <button class="btn btn-danger">
-                            Excluir cód: ${item.id} (Del)
+                        <button class="btn btn-danger btn-sm" onclick="DeleteItem(${item.id})">
+                            <i class="bi bi-trash-fill"></i> Excluir
                         </button>
                     </td>
                 </tr>
            `;
     });
+
     //Atualizamos o itens da venda na tabela
     document.getElementById("products-table-tbody").innerHTML = trs;
     //Atualizamos o total de itens vencido.
     document.getElementById("product-count").innerText =
       `Itens ${response.data.length}`;
-  } catch (error) {}
+  } catch (error) {
+    console.error("Erro ao listar itens:", error);
+  }
 }
+
+//Função para excluir item da venda
+async function DeleteItem(idItem) {
+  const form = document.getElementById('form');
+  const inputId = document.createElement('input');
+  inputId.type = 'hidden';
+  inputId.name = 'id';
+  inputId.value = idItem;
+  form.appendChild(inputId);
+
+  try {
+    const response = await Requests.SetForm("form").Post("/venda/deleteitem");
+    if (!response.status) {
+      Swal.fire({
+        icon: "error",
+        title: "Erro",
+        text: response.msg || "Não foi possível excluir o item",
+        time: 2000,
+        progressBar: true,
+      });
+      return;
+    }
+    Swal.fire({
+      icon: "success",
+      title: "Sucesso",
+      text: "Item excluído com sucesso!",
+      time: 2000,
+      progressBar: true,
+    });
+    // Recarrega a lista de itens
+    await listItemSale();
+  } catch (error) {
+    Swal.fire({
+      icon: "error",
+      title: "Erro",
+      text: error.message || "Ocorreu um erro ao excluir o item.",
+      time: 2000,
+      progressBar: true,
+    });
+  }
+  // Remove o input temporário
+  form.removeChild(inputId);
+}
+
+// Tornar função global para uso no onclick
+window.DeleteItem = DeleteItem;
+
 // Event Listeners para botões de adicionar
 document.addEventListener("DOMContentLoaded", async () => {
   if (Action.value === "e") {
     await listItemSale();
   }
 });
+
 // Feedback visual para cliques
 document.addEventListener("click", function (e) {
   if (e.target.matches("button")) {
     e.target.style.transition = "transform 0.1s";
   }
 });
+
 insertItemButton.addEventListener("click", async () => {
   //Salva os dados da venda
   await InsertSale();
@@ -206,30 +265,39 @@ insertItemButton.addEventListener("click", async () => {
   
   await listItemSale();
 });
+
+// Atalhos de teclado
 document.addEventListener("keydown", (e) => {
-  //Bloque a ação de teclas F4, F8 e F9, F12 para evitar ações indesejadas
-  //e.preventDefault();
   //Abrimos o modal de pesquisa de produto com a tecla F4
   if (e.key === "F4") {
     const myModalEl = document.getElementById("pesquisaProdutoModal");
-    const modal = new bootstrap.Modal(myModalEl);
-    modal.show();
+    if (myModalEl) {
+      const modal = new bootstrap.Modal(myModalEl);
+      modal.show();
+    }
   }
   //Fechamos o modal de pesquisa de produto com a tecla F8
   if (e.key === "F8") {
     const myModalEl = document.getElementById("pesquisaProdutoModal");
-    const modal = new bootstrap.Modal(myModalEl);
-    modal.hide();
+    if (myModalEl) {
+      const modal = bootstrap.Modal.getInstance(myModalEl);
+      if (modal) {
+        modal.hide();
+      }
+    }
   }
-  //Inserimos o item da venda com a tecla F9
-  if (e.key === "F9") {
-    alert("olá");
+  //F5 - Atualizar lista de itens
+  if (e.key === "F5") {
+    e.preventDefault();
+    listItemSale();
   }
 });
+
 $("#diaVencimento").flatpickr({
   locale: "pt",
-  dateFormat: "d/m/Y", // Opcional: Formato brasileiro
+  dateFormat: "d/m/Y",
 });
+
 $("#pesquisa").select2({
   theme: "bootstrap-5",
   placeholder: "Selecione um produto",
@@ -239,8 +307,10 @@ $("#pesquisa").select2({
     type: "POST",
   },
 });
+
 $(".form-select").on("select2:open", function (e) {
   let inputElement = document.querySelector(".select2-search__field");
   inputElement.placeholder = "Digite para pesquisar...";
   inputElement.focus();
 });
+

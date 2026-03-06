@@ -5,6 +5,7 @@ namespace app\controller;
 use app\database\builder\InsertQuery;
 use app\database\builder\SelectQuery;
 use app\database\builder\UpdateQuery;
+use app\database\builder\DeleteQuery;
 
 class Sale extends Base
 {
@@ -277,4 +278,233 @@ class Sale extends Base
         ];
         return $this->SendJson($response, $data);
     }
+
+    public function listsale($request, $response)
+    {
+        try {
+            #Captura todas a variaveis de forma mais segura VARIAVEIS POST.
+            $form = $request->getParsedBody();
+            #Qual a coluna da tabela deve ser ordenada.
+            $order = $form['order'][0]['column'] ?? 0;
+            #Tipo de ordenação
+            $orderType = $form['order'][0]['dir'] ?? 'desc';
+            #Em qual registro se inicia o retorno dos registros, OFFSET
+            $start = $form['start'] ?? 0;
+            #Limite de registro a serem retornados do banco de dados LIMIT
+            $length = $form['length'] ?? 10;
+            
+            $fields = [
+                0 => 'id',
+                1 => 'id_cliente',
+                2 => 'total_bruto',
+                3 => 'desconto',
+                4 => 'total_liquido',
+                5 => 'observacao',
+                6 => 'created_at',
+            ];
+            #Capturamos o nome do campo a ser ordenado.
+            $orderField = $fields[$order] ?? 'id';
+            #O termo pesquisado
+            $term = $form['search']['value'] ?? '';
+            
+            $query = SelectQuery::select('id, id_cliente, total_bruto, desconto, total_liquido, observacao, created_at')
+                ->from('sale');
+                
+            if (!is_null($term) && ($term !== '')) {
+                $query->where('id', 'ilike', "%{$term}%", 'or')
+                    ->where('id_cliente', 'ilike', "%{$term}%", 'or')
+                    ->where('observacao', 'ilike', "%{$term}%", 'or')
+                    ->where('total_bruto', 'ilike', "%{$term}%", 'or')
+                    ->where('total_liquido', 'ilike', "%{$term}%");
+            }
+            
+            $sales = $query
+                ->order($orderField, $orderType)
+                ->limit($length, $start)
+                ->fetchAll();
+                
+            # Buscar nomes de clientes
+            $salesData = [];
+            foreach ($sales as $key => $value) {
+                # Buscar nome do cliente
+                $customer = SelectQuery::select('nome_fantasia')
+                    ->from('customer')
+                    ->where('id', '=', $value['id_cliente'])
+                    ->fetch();
+                
+                $nomeCliente = $customer ? $customer['nome_fantasia'] : 'Consumidor Final';
+                $dataFormatada = date('d/m/Y H:i', strtotime($value['created_at']));
+                
+                $salesData[$key] = [
+                    $value['id'],
+                    $nomeCliente,
+                    'R$ ' . number_format($value['total_bruto'], 2, ',', '.'),
+                    'R$ ' . number_format($value['desconto'], 2, ',', '.'),
+                    'R$ ' . number_format($value['total_liquido'], 2, ',', '.'),
+                    $value['observacao'] ?? '-',
+                    $dataFormatada,
+                    "<div class='d-flex gap-2'>
+                        <a href='/venda/alterar/{$value['id']}' class='btn btn-warning btn-sm px-2 shadow-sm' style='white-space: nowrap; font-weight: 500;'>
+                            <i class='bi bi-pencil-square'></i> Alterar
+                        </a>
+                        <button type='button' onclick='Delete({$value['id']});' class='btn btn-danger btn-sm px-2 shadow-sm' style='white-space: nowrap; font-weight: 500;'>
+                            <i class='bi bi-trash-fill'></i> Excluir
+                        </button>
+                    </div>"
+                ];
+            }
+            
+            $data = [
+                'status' => true,
+                'recordsTotal' => count($sales),
+                'recordsFiltered' => count($sales),
+                'data' => $salesData
+            ];
+            
+            $payload = json_encode($data);
+            $response->getBody()->write($payload);
+            return $response
+                ->withHeader('Content-Type', 'application/json')
+                ->withStatus(200);
+                
+        } catch (\Exception $e) {
+            return $this->SendJson($response, [
+                'status' => false,
+                'msg' => 'Erro ao listar vendas: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function delete($request, $response)
+    {
+        try {
+            $form = $request->getParsedBody();
+            $id = $form['id'] ?? null;
+            
+            if (empty($id) || is_null($id)) {
+                return $this->SendJson($response, [
+                    'status' => false,
+                    'msg' => 'Restrição: O ID da venda é obrigatório!',
+                    'id' => 0
+                ], 403);
+            }
+            
+            # Primeiro excluir os itens da venda
+            DeleteQuery::table('item_sale')
+                ->where('id_venda', '=', $id)
+                ->delete();
+            
+            # Depois excluir a venda
+            $IsDelete = DeleteQuery::table('sale')
+                ->where('id', '=', $id)
+                ->delete();
+
+            if (!$IsDelete) {
+                return $this->SendJson($response, [
+                    'status' => false,
+                    'msg' => 'Erro ao excluir venda!',
+                    'id' => $id
+                ], 403);
+            }
+            
+            return $this->SendJson($response, [
+                'status' => true,
+                'msg' => 'Venda removida com sucesso!',
+                'id' => $id
+            ]);
+            
+        } catch (\Throwable $th) {
+            return $this->SendJson($response, [
+                'status' => false,
+                'msg' => 'Erro: ' . $th->getMessage(),
+                'id' => 0
+            ], 500);
+        }
+    }
+
+    public function deleteitem($request, $response)
+    {
+        try {
+            $form = $request->getParsedBody();
+            $id = $form['id'] ?? null;
+            
+            if (empty($id) || is_null($id)) {
+                return $this->SendJson($response, [
+                    'status' => false,
+                    'msg' => 'Restrição: O ID do item é obrigatório!',
+                    'id' => 0
+                ], 403);
+            }
+            
+            $IsDelete = DeleteQuery::table('item_sale')
+                ->where('id', '=', $id)
+                ->delete();
+
+            if (!$IsDelete) {
+                return $this->SendJson($response, [
+                    'status' => false,
+                    'msg' => 'Erro ao excluir item!',
+                    'id' => $id
+                ], 403);
+            }
+            
+            return $this->SendJson($response, [
+                'status' => true,
+                'msg' => 'Item removido com sucesso!',
+                'id' => $id
+            ]);
+            
+        } catch (\Throwable $th) {
+            return $this->SendJson($response, [
+                'status' => false,
+                'msg' => 'Erro: ' . $th->getMessage(),
+                'id' => 0
+            ], 500);
+        }
+    }
+
+    public function print($request, $response)
+    {
+        try {
+            $sales = SelectQuery::select('id, id_cliente, total_bruto, desconto, total_liquido, observacao, created_at')
+                ->from('sale')
+                ->order('id', 'DESC')
+                ->fetchAll();
+
+            # Buscar nomes de clientes
+            $salesData = [];
+            foreach ($sales as $sale) {
+                $customer = SelectQuery::select('nome_fantasia')
+                    ->from('customer')
+                    ->where('id', '=', $sale['id_cliente'])
+                    ->fetch();
+                
+                $salesData[] = [
+                    'id' => $sale['id'],
+                    'cliente' => $customer ? $customer['nome_fantasia'] : 'Consumidor Final',
+                    'total_bruto' => $sale['total_bruto'],
+                    'desconto' => $sale['desconto'],
+                    'total_liquido' => $sale['total_liquido'],
+                    'observacao' => $sale['observacao'] ?? '-',
+                    'data' => date('d/m/Y H:i', strtotime($sale['created_at']))
+                ];
+            }
+
+            $dadosTemplate = [
+                'titulo' => 'Relatório de Vendas',
+                'vendas' => $salesData,
+                'total' => count($salesData)
+            ];
+
+            return $this->getTwig()
+                ->render($response, $this->setView('reports/reportsale'), $dadosTemplate)
+                ->withHeader('Content-Type', 'text/html')
+                ->withStatus(200);
+
+        } catch (\Exception $e) {
+            $response->getBody()->write("Erro ao gerar relatório: " . $e->getMessage());
+            return $response->withStatus(500);
+        }
+    }
 }
+

@@ -47,20 +47,20 @@
                                             <i class="bi bi-shop" style="color: rgb(68, 4, 252);"></i>
                                         </span>
                                         <input type="text" class="form-control bg-dark text-white border-secondary border-start-0 shadow-none" id="nome_fantasia" name="nome_fantasia"
-                                            placeholder="Nome comercial" value="{{empresa.nome_fantasia}}" autofocus>
+                                            placeholder="Nome comercial" value="{{company.nome_fantasia}}" autofocus>
                                     </div>
                                 </div>
 
                                 <div class="col-md-6">
                                     <label for="sobrenome_razao" class="form-label small fw-bold text-white-50 text-uppercase">Razão Social</label>
                                     <input type="text" class="form-control bg-dark text-white border-secondary shadow-none" id="sobrenome_razao" name="sobrenome_razao"
-                                        placeholder="Nome jurídico completo" value="{{empresa.sobrenome_razao}}">
+                                        placeholder="Nome jurídico completo" value="{{company.sobrenome_razao}}">
                                 </div>
 
                                 <div class="col-md-4">
                                     <label for="rg_ie" class="form-label small fw-bold text-white-50 text-uppercase">Inscrição Estadual (IE)</label>
                                     <input type="text" class="form-control bg-dark text-white border-secondary shadow-none" id="rg_ie" name="rg_ie"
-                                        placeholder="000.000.000.000" value="{{empresa.rg_ie}}">
+                                        placeholder="000.000.000.000" value="{{company.rg_ie}}">
                                 </div>
 
                                 <div class="col-md-4">
@@ -70,15 +70,15 @@
                                             <i class="bi bi-card-checklist" style="color: rgb(68, 4, 252);"></i>
                                         </span>
                                         <input type="text" class="form-control bg-dark text-white border-secondary border-start-0 shadow-none" id="cpf_cnpj" name="cpf_cnpj"
-                                            placeholder="00.000.000/0000-00" value="{{empresa.cpf_cnpj}}">
+                                            placeholder="00.000.000/0000-00" value="{{company.cpf_cnpj}}">
                                     </div>
                                 </div>
 
                                 <div class="col-md-4">
                                     <label for="ativo" class="form-label small fw-bold text-white-50 text-uppercase">Status Operacional</label>
                                     <select class="form-select bg-dark text-white border-secondary shadow-none" id="ativo" name="ativo">
-                                        <option value="1" {% if empresa.ativo == 1 %}selected{% endif %}>Ativo</option>
-                                        <option value="0" {% if empresa.ativo == 0 %}selected{% endif %}>Inativo</option>
+                                        <option value="1" {% if company.ativo == 1 %}selected{% endif %}>Ativo</option>
+                                        <option value="0" {% if company.ativo == 0 %}selected{% endif %}>Inativo</option>
                                     </select>
                                 </div>
                             </div>
