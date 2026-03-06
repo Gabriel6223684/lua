@@ -77,6 +77,47 @@ class Produto extends Base
         #$data['pagination'] = ['more' => true];
         return $this->SendJson($response, $data);
     }
+    
+    /**
+     * Lista todos os produtos para pesquisa no modal (sem paginação)
+     * Usado no modal de pesquisa de produto (F4) na tela de vendas
+     */
+    public function listproductall($request, $response)
+    {
+        try {
+            $form = $request->getParsedBody();
+            $term = $form['search'] ?? '';
+            
+            // Busca produtos na view que tem estoque
+            $query = SelectQuery::select('id, codigo_barra, nome, descricao_curta, valor, estoque')
+                ->from('view_product')
+                ->order('nome', 'ASC');
+            
+            // Se houver termo de busca, filtra
+            if (!empty($term)) {
+                $query->where('id', 'ilike', "%{$term}%", 'or')
+                    ->where('nome', 'ilike', "%{$term}%", 'or')
+                    ->where('codigo_barra', 'ilike', "%{$term}%", 'or')
+                    ->where('descricao_curta', 'ilike', "%{$term}%");
+            }
+            
+            $produtos = $query->fetchAll();
+            
+            $data = [
+                'status' => true,
+                'data' => $produtos,
+                'total' => count($produtos)
+            ];
+            
+            return $this->SendJson($response, $data);
+            
+        } catch (\Exception $e) {
+            return $this->SendJson($response, [
+                'status' => false,
+                'msg' => 'Erro ao listar produtos: ' . $e->getMessage()
+            ], 500);
+        }
+    }
     public function listproduto($request, $response)
     {
         #Captura todas a variaveis de forma mais segura VARIAVEIS POST.

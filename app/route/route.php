@@ -32,6 +32,7 @@ $app->group('/venda', function (RouteCollectorProxy $group) {
     $group->post('/listsale', Sale::class . ':listsale');
     $group->post('/delete', Sale::class . ':delete');
     $group->post('/deleteitem', Sale::class . ':deleteitem');
+    $group->post('/updateitem', Sale::class . ':updateItem');
 });
 
 $app->group('/login', function (RouteCollectorProxy $group) {
@@ -93,6 +94,7 @@ $app->group('/produto', function (RouteCollectorProxy $group) {
     $group->post('/insert', Produto::class . ':insert');
     $group->post('/delete', Produto::class . ':delete');
     $group->post('/listproductdata', Produto::class . ':listproductdata');
+    $group->post('/listproductall', Produto::class . ':listproductall');
     $group->post('/adjuststock', Produto::class . ':adjuststock');
 });
 

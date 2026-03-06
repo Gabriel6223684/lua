@@ -10,16 +10,40 @@
 <body>
     <div class="modal fade" id="pesquisaProdutoModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1"
         aria-labelledby="staticBackdropLabel" aria-hidden="true">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h1 class="modal-title fs-5" id="staticBackdropLabel">Pesquisa produto</h1>
+                    <h1 class="modal-title fs-5" id="staticBackdropLabel">Pesquisa de Produto</h1>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <table>
-
-                    </table>
+                    <div class="mb-3">
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-search"></i></span>
+                            <input type="text" class="form-control" id="searchProduct" placeholder="Digite para pesquisar por código, nome ou código de barras...">
+                            <button class="btn btn-outline-secondary" type="button" onclick="clearSearchProduct()">Limpar</button>
+                        </div>
+                    </div>
+                    <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                        <table class="table table-hover table-striped" id="tableProducts">
+                            <thead class="table-dark sticky-top">
+                                <tr>
+                                    <th>Código</th>
+                                    <th>Cód. Barra</th>
+                                    <th>Nome</th>
+                                    <th>Descrição</th>
+                                    <th>Estoque</th>
+                                    <th>Valor</th>
+                                    <th>Ação</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tableProductsBody">
+                                <tr>
+                                    <td colspan="7" class="text-center text-muted">Carregando produtos...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-danger" data-bs-dismiss="modal">
@@ -171,6 +195,7 @@
                             <tr>
                                 <th>Código</th>
                                 <th>Descrição</th>
+                                <th>Qtd</th>
                                 <th>Preço</th>
                                 <th>Ação</th>
                             </tr>

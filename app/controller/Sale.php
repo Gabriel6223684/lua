@@ -34,16 +34,7 @@ class Sale extends Base
     {
         #captura os dados do formulário
         $form = $request->getParsedBody();
-        #Captura o id do produto
-        $id_produto = $form['pesquisa'];
-        #Verificar se o id do produto esta vasio ou nulo
-        if (empty($id_produto) or is_null($id_produto)) {
-            return $this->SendJson($response, [
-                'status' => false,
-                'msg' => 'Restrição: O ID do produto é obrigatório!',
-                'id' => 0
-            ], 403);
-        }
+        
         #seleciona o id do cliente CONSUMIDOR FINAL para inserir a venda
         $customer = SelectQuery::select('id')
             ->from('customer')
@@ -128,9 +119,12 @@ class Sale extends Base
                 ->where('id_venda', '=', $id)
                 ->fetch();
 
+            $total_bruto = $total_venda ? floatval($total_venda['total_bruto'] ?? 0) : 0;
+            $total_liquido = $total_venda ? floatval($total_venda['total_liquido'] ?? 0) : 0;
+
             $FieldAndValues = [
-                'total_bruto' => $total_venda['total_bruto'],
-                'total_liquido' => $total_venda['total_liquido']
+                'total_bruto' => $total_bruto,
+                'total_liquido' => $total_liquido
             ];
             #Alteramos o código do cliente
             if (!is_null($id_cliente)) {
@@ -143,7 +137,7 @@ class Sale extends Base
             if (!is_null($quantidade)) {
                 $FieldAndValues['quantidade'] = $quantidade;
             }
-            $isUpdated = UpdateQuery::table('sale')->set($FieldAndValues)->update();
+            $isUpdated = UpdateQuery::table('sale')->set($FieldAndValues)->where('id', '=', $id)->update();
             if (!$isUpdated) {
                 return $this->SendJson($response, ['status' => false, 'msg' => 'Restrição: ' . $isUpdated, 'id' => 0], 500);
             }
@@ -233,6 +227,10 @@ class Sale extends Base
                     'id' => 0
                 ], 500);
             }
+            
+            // Atualiza os totais da venda após inserir item
+            $this->atualizarTotaisVenda($id);
+            
             return $this->SendJson($response, [
                 'status' => true,
                 'msg' => 'Item inserido com sucesso!',
@@ -264,16 +262,23 @@ class Sale extends Base
             ->where('id_venda', '=', $id)
             ->fetch();
 
-        $items = SelectQuery::select('id,nome,total_liquido')
+        $items = SelectQuery::select('id,nome,quantidade,total_liquido,total_bruto')
             ->from('item_sale')
             ->where('id_venda', '=', $id)
             ->fetchAll();
+
+        // Garantir que os totais não sejam nulos
+        $total_liquido = $total_venda ? floatval($total_venda['total_liquido'] ?? 0) : 0;
+        $total_bruto = $total_venda ? floatval($total_venda['total_bruto'] ?? 0) : 0;
 
         $data = [
             'status' => true,
             'id' => $id,
             'msg' => 'Dados listados com sucesso!',
-            'sale' => $total_venda,
+            'sale' => [
+                'total_liquido' => $total_liquido,
+                'total_bruto' => $total_bruto
+            ],
             'data' => $items
         ];
         return $this->SendJson($response, $data);
@@ -307,6 +312,18 @@ class Sale extends Base
             #O termo pesquisado
             $term = $form['search']['value'] ?? '';
             
+            # Contar total de registros (sem limite) para paginação correta
+            $countQuery = SelectQuery::select('id')->from('sale');
+            if (!is_null($term) && ($term !== '')) {
+                $countQuery->where('id', 'ilike', "%{$term}%", 'or')
+                    ->where('id_cliente', 'ilike', "%{$term}%", 'or')
+                    ->where('observacao', 'ilike', "%{$term}%", 'or')
+                    ->where('total_bruto', 'ilike', "%{$term}%", 'or')
+                    ->where('total_liquido', 'ilike', "%{$term}%");
+            }
+            $totalRecords = count($countQuery->fetchAll());
+            
+            # Query com paginação
             $query = SelectQuery::select('id, id_cliente, total_bruto, desconto, total_liquido, observacao, created_at')
                 ->from('sale');
                 
@@ -356,8 +373,8 @@ class Sale extends Base
             
             $data = [
                 'status' => true,
-                'recordsTotal' => count($sales),
-                'recordsFiltered' => count($sales),
+                'recordsTotal' => $totalRecords,
+                'recordsFiltered' => $totalRecords,
                 'data' => $salesData
             ];
             
@@ -436,6 +453,9 @@ class Sale extends Base
                 ], 403);
             }
             
+            // Buscar o item para obter o id_venda antes de excluir
+            $item = SelectQuery::select('id_venda')->from('item_sale')->where('id', '=', $id)->fetch();
+            
             $IsDelete = DeleteQuery::table('item_sale')
                 ->where('id', '=', $id)
                 ->delete();
@@ -446,6 +466,11 @@ class Sale extends Base
                     'msg' => 'Erro ao excluir item!',
                     'id' => $id
                 ], 403);
+            }
+            
+            // Atualizar totais da venda após excluir item
+            if ($item && isset($item['id_venda'])) {
+                $this->atualizarTotaisVenda($item['id_venda']);
             }
             
             return $this->SendJson($response, [
@@ -461,6 +486,101 @@ class Sale extends Base
                 'id' => 0
             ], 500);
         }
+    }
+
+    public function updateItem($request, $response)
+    {
+        try {
+            $form = $request->getParsedBody();
+            $id = $form['id'] ?? null;
+            $quantidade = $form['quantidade'] ?? null;
+            
+            if (empty($id) || is_null($id)) {
+                return $this->SendJson($response, [
+                    'status' => false,
+                    'msg' => 'Restrição: O ID do item é obrigatório!',
+                    'id' => 0
+                ], 403);
+            }
+            
+            $quantidade = intval($quantidade);
+            if (is_null($quantidade) || $quantidade <= 0) {
+                return $this->SendJson($response, [
+                    'status' => false,
+                    'msg' => 'Restrição: A quantidade deve ser maior que zero!',
+                    'id' => 0
+                ], 403);
+            }
+            
+            // Buscar o item atual para calcular os valores
+            $item = SelectQuery::select()->from('item_sale')->where('id', '=', $id)->fetch();
+            if (!$item) {
+                return $this->SendJson($response, [
+                    'status' => false,
+                    'msg' => 'Restrição: Item não encontrado!',
+                    'id' => 0
+                ], 403);
+            }
+            
+            $quantidadeItem = intval($item['quantidade'] ?? 1);
+            $valorUnitario = floatval($item['total_liquido'] ?? 0) / $quantidadeItem;
+            
+            // Calcular novos totais
+            $total_bruto = $valorUnitario * $quantidade;
+            $total_liquido = $valorUnitario * $quantidade;
+            
+            $FieldAndValues = [
+                'quantidade' => $quantidade,
+                'total_bruto' => $total_bruto,
+                'total_liquido' => $total_liquido
+            ];
+            
+            $isUpdated = UpdateQuery::table('item_sale')->set($FieldAndValues)->where('id', '=', $id)->update();
+            
+            if (!$isUpdated) {
+                return $this->SendJson($response, [
+                    'status' => false,
+                    'msg' => 'Restrição: Erro ao atualizar item!',
+                    'id' => 0
+                ], 403);
+            }
+            
+            // Atualiza os totais da venda
+            $this->atualizarTotaisVenda($item['id_venda']);
+            
+            return $this->SendJson($response, [
+                'status' => true,
+                'msg' => 'Item atualizado com sucesso!',
+                'id' => $id
+            ]);
+            
+        } catch (\Throwable $th) {
+            return $this->SendJson($response, [
+                'status' => false,
+                'msg' => 'Erro: ' . $th->getMessage(),
+                'id' => 0
+            ], 500);
+        }
+    }
+    
+    // Método auxiliar para atualizar totais da venda
+    private function atualizarTotaisVenda($id_venda)
+    {
+        $total_venda = SelectQuery::select("sum(total_liquido) as total_liquido,sum(total_bruto) as total_bruto")
+            ->from('item_sale')
+            ->where('id_venda', '=', $id_venda)
+            ->fetch();
+
+        $total_bruto = $total_venda ? floatval($total_venda['total_bruto'] ?? 0) : 0;
+        $total_liquido = $total_venda ? floatval($total_venda['total_liquido'] ?? 0) : 0;
+
+        UpdateQuery::table('sale')
+            ->set([
+                'total_bruto' => $total_bruto,
+                'total_liquido' => $total_liquido
+            ])
+            ->where('id', '=', $id_venda)
+            ->update();
     }
 
     public function print($request, $response)
