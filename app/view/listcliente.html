@@ -1,0 +1,123 @@
+{% extends "main.html" %}
+{% block main %}
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+
+<div class="app-content-header py-4">
+    <div class="container-fluid">
+        <div class="row align-items-center mb-4">
+            <div class="col-sm-6">
+                <h3 class="fw-bold text-white mb-0">
+                    <i class="bi bi-people-fill me-2" style="color: rgb(68, 4, 252);"></i>Gestão de Clientes
+                </h3>
+            </div>
+            <div class="col-sm-6">
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb float-sm-end bg-dark border border-secondary p-2 px-3 rounded-pill shadow-sm small">
+                        <li class="breadcrumb-item"><a href="/home" class="text-decoration-none text-white-50">Início</a></li>
+                        <li class="breadcrumb-item active text-white" aria-current="page">Clientes</li>
+                    </ol>
+                </nav>
+            </div>
+        </div>
+
+        <form id="form">
+            <input type="hidden" id="id" name="id">
+
+            <div class="card bg-dark border-secondary shadow-sm">
+                <div class="card-header bg-dark py-3 border-bottom border-secondary">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h6 class="m-0 fw-bold text-white-50 text-uppercase small" style="letter-spacing: 1px;">Relação de Clientes</h6>
+
+                        <div class="d-flex gap-2">
+                            <a href="/cliente/print" target="_blank"
+                                class="btn btn-outline-light btn-sm px-3 shadow-sm fw-bold d-flex align-items-center gap-2"
+                                style="border-color: rgba(255,255,255,0.2);">
+                                <i class="bi bi-printer" style="color: rgb(68, 4, 252);"></i> Imprimir
+                            </a>
+
+                            <a href="/cliente/cadastro"
+                                class="btn btn-sm px-3 shadow-sm fw-bold d-flex align-items-center gap-2 text-white"
+                                style="background-color: rgb(68, 4, 252); border: none;">
+                                <i class="bi bi-person-plus-fill"></i> Cadastrar
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-dark table-hover align-middle mb-0" id="tabela">
+                            <thead class="text-white-50 small">
+                                <tr class="border-secondary">
+                                    <th class="ps-4 py-3" style="width: 100px;">CÓDIGO</th>
+                                    <th>NOME / FANTASIA</th>
+                                    <th>SOBRENOME / RAZÃO</th>
+                                    <th>CPF / CNPJ</th>
+                                    <th>RG / IE</th>
+                                    <th>STATUS</th>
+                                    <th class="text-center" style="width: 150px;">AÇÕES</th>
+                                </tr>
+                            </thead>
+                            <tbody class="small text-white-50 border-top-0">
+                                </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal fade" id="modal-editar" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content bg-dark text-white border border-secondary shadow-lg">
+                        <div class="modal-header border-secondary py-3">
+                            <h5 class="modal-title fw-bold">
+                                <i class="bi bi-pencil-square me-2" style="color: rgb(68, 4, 252);"></i>Editar Cliente
+                            </h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body p-4">
+                            <div class="row">
+                                <div class="col-12 text-white">
+                                    <div class="form-floating mb-3">
+                                        <input type="text" class="form-control bg-dark text-white border-secondary shadow-none" id="nome_fantasia_modal"
+                                            name="nome_fantasia" placeholder="Nome">
+                                        <label for="nome_fantasia_modal" class="text-white-50">Nome / Fantasia</label>
+                                    </div>
+                                    <div class="form-floating mb-3">
+                                        <input type="text" class="form-control bg-dark text-white border-secondary shadow-none" id="sobrenome_razao_modal"
+                                            name="sobrenome_razao" placeholder="Sobrenome">
+                                        <label for="sobrenome_razao_modal" class="text-white-50">Sobrenome / Razão Social</label>
+                                    </div>
+                                    <div class="form-floating mb-3">
+                                        <input type="text" class="form-control bg-dark text-white border-secondary shadow-none" id="cpf_cnpj_modal"
+                                            name="cpf_cnpj" placeholder="CPF/CNPJ">
+                                        <label for="cpf_cnpj_modal" class="text-white-50">CPF / CNPJ</label>
+                                    </div>
+                                    <div class="form-floating mb-3">
+                                        <input type="text" class="form-control bg-dark text-white border-secondary shadow-none" id="rg_ie_modal"
+                                            name="rg_ie" placeholder="RG/IE">
+                                        <label for="rg_ie_modal" class="text-white-50">RG / IE</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer border-secondary p-3">
+                            <button type="button" class="btn btn-outline-secondary fw-semibold px-4 text-white" data-bs-dismiss="modal">Fechar</button>
+                            <button type="button" id="salvarEditar" class="btn px-5 fw-bold shadow-sm text-white" 
+                                    style="background-color: rgb(68, 4, 252); border: none;">
+                                Atualizar Dados
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block script %}
+{% include "script.html" %}
+<script defer type="module" src="/js/listacliente.js"></script>
+{% endblock %}

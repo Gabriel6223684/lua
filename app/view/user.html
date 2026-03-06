@@ -1,0 +1,102 @@
+{% extends "main.html" %}
+
+{% block main %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+
+<div class="app-content-header py-4">
+    <div class="container-fluid">
+        <div class="row align-items-center mb-4">
+            <div class="col-sm-6">
+                <h3 class="fw-bold text-white mb-0">
+                    <i class="bi bi-person-gear me-2" style="color: rgb(68, 4, 252);"></i>{{titulo}}
+                </h3>
+            </div>
+            <div class="col-sm-6">
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb float-sm-end bg-dark border border-secondary p-2 px-3 rounded-pill shadow-sm small">
+                        <li class="breadcrumb-item"><a href="/home" class="text-decoration-none text-white-50">Início</a></li>
+                        <li class="breadcrumb-item"><a href="/usuario/lista" class="text-decoration-none text-white-50">Usuários</a></li>
+                        <li class="breadcrumb-item active text-white" aria-current="page">Cadastro</li>
+                    </ol>
+                </nav>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-12 col-lg-10 mx-auto">
+                <form id="form" class="needs-validation">
+                    <input type="hidden" id="acao" name="acao" value="{{acao}}">
+                    <input type="hidden" id="id" name="id" value="{{id}}">
+                    
+                    <div class="card border-secondary shadow-sm mb-4 bg-dark text-white">
+                        <div class="card-header bg-dark py-3 border-bottom border-secondary">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h5 class="card-title mb-0 text-white-50 fw-bold uppercase small" style="letter-spacing: 1px;">Dados Pessoais</h5>
+                                <a href="/usuario/lista" class="btn btn-outline-secondary btn-sm rounded-pill px-3 text-white border-secondary">
+                                    <i class="bi bi-arrow-left me-1"></i> Voltar
+                                </a>
+                            </div>
+                        </div>
+                        
+                        <div class="card-body p-4">
+                            <div class="row g-4">
+                                <div class="col-md-6">
+                                    <label for="nome" class="form-label fw-semibold text-white-50 small uppercase">Nome</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-dark border-secondary text-white">
+                                            <i class="bi bi-person" style="color: rgb(68, 4, 252);"></i>
+                                        </span>
+                                        <input type="text" class="form-control bg-dark text-white border-secondary shadow-none" id="nome" name="nome" 
+                                               placeholder="Ex: João" value="{{user.nome}}">
+                                    </div>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label for="sobrenome" class="form-label fw-semibold text-white-50 small uppercase">Sobrenome</label>
+                                    <input type="text" class="form-control bg-dark text-white border-secondary shadow-none" id="sobrenome" name="sobrenome" 
+                                           placeholder="Ex: Silva" value="{{user.sobrenome}}">
+                                </div>
+
+                                <div class="col-md-4">
+                                    <label for="rg" class="form-label fw-semibold text-white-50 small uppercase">RG</label>
+                                    <input type="text" class="form-control bg-dark text-white border-secondary shadow-none" id="rg" name="rg" 
+                                           placeholder="00.000.000-0" value="{{user.rg}}">
+                                </div>
+
+                                <div class="col-md-4">
+                                    <label for="cpf" class="form-label fw-semibold text-white-50 small uppercase">CPF</label>
+                                    <input type="text" class="form-control bg-dark text-white border-secondary shadow-none" id="cpf" name="cpf" 
+                                           placeholder="000.000.000-00" value="{{user.cpf}}">
+                                </div>
+
+                                <div class="col-md-4">
+                                    <label for="senha" class="form-label fw-semibold text-white-50 small uppercase">Senha</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-dark border-secondary text-white">
+                                            <i class="bi bi-lock" style="color: rgb(68, 4, 252);"></i>
+                                        </span>
+                                        <input type="password" class="form-control bg-dark text-white border-secondary shadow-none" id="senha" name="senha" 
+                                               placeholder="Senha segura" value="{{user.senha}}">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card-footer bg-dark border-top border-secondary p-4 d-flex justify-content-end">
+                            <button type="button" id="salvar" class="btn btn-primary px-5 py-2 rounded-pill fw-bold shadow" 
+                                    style="background-color: rgb(68, 4, 252); border: none;">
+                                <i class="bi bi-check2-circle me-2"></i> Salvar Alterações
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block script %}
+{% include 'script.html' %}
+<script defer type="module" src="/js/user.js"></script>
+{% endblock %}
