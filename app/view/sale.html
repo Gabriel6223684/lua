@@ -109,58 +109,134 @@
                                     </div>
                                     <div class="modal-body">
                                         <div class="row g-2">
-                                            <div class="col-md">
+                                            <div class="col-md-6">
                                                 <div class="form-floating">
-                                                    <select class="form-select" id="condicaoPagamento"
-                                                        name="condicaoPagamento">
-                                                        <option selected>Open this select menu</option>
-                                                        <option value="1">One</option>
-                                                        <option value="2">Two</option>
-                                                        <option value="3">Three</option>
+                                                    <select class="form-select" id="formaPagamento" name="formaPagamento">
+                                                        <option value="">Selecione...</option>
+                                                        <option value="DINHEIRO">Dinheiro</option>
+                                                        <option value="PIX">PIX</option>
+                                                        <option value="CARTAO_CREDITO">Cartão de Crédito</option>
+                                                        <option value="CARTAO_DEBITO">Cartão de Débito</option>
+                                                        <option value="BOLETO">Boleto</option>
                                                     </select>
-                                                    <label for="condicaoPagamento">Selecione a condição de
-                                                        pagamento</label>
+                                                    <label for="formaPagamento">Forma de Pagamento</label>
                                                 </div>
                                             </div>
-                                            <div class="col-md">
+                                            <div class="col-md-6">
                                                 <div class="form-floating">
                                                     <input type="text" class="form-control" id="valorPago"
                                                         name="valorPago" placeholder="name@example.com" value="R$ 0,00">
-                                                    <label for="valorPago">Informe o valor</label>
+                                                    <label for="valorPago">Valor Pago</label>
                                                 </div>
                                             </div>
                                         </div>
-                                        <div class="row g-2 mt-2">
-                                            <div class="col-md">
-                                                <div class="form-floating">
-                                                    <select class="form-select" id="parcelas" name="parcelas">
-                                                        <option selected>Open this select menu</option>
-                                                        <option value="1">One</option>
-                                                        <option value="2">Two</option>
-                                                        <option value="3">Three</option>
-                                                    </select>
-                                                    <label for="parcelas">Selecione a quantidade de parcelas</label>
+                                        
+                                        <!-- PIX Payment Section -->
+                                        <div id="pixPaymentSection" class="mt-3" style="display: none;">
+                                            <div class="alert alert-info">
+                                                <h5><i class="bi bi-qr-code"></i> Pagamento via PIX</h5>
+                                            </div>
+                                            <div class="row g-2">
+                                                <div class="col-md-12">
+                                                    <div class="form-floating">
+                                                        <input type="text" class="form-control" id="pixKey" 
+                                                            name="pixKey" placeholder="Chave PIX" value="">
+                                                        <label for="pixKey">Chave PIX (CPF/CNPJ, Email, Telefone ou Aleatória)</label>
+                                                    </div>
                                                 </div>
                                             </div>
-                                            <div class="col-md">
-                                                <div class="form-floating">
-                                                    <input type="text" class="form-control" id="diaVencimento"
-                                                        name="diaVencimento" placeholder="name@example.com">
-                                                    <label for="diaVencimento">Selecione dia de vencimento</label>
+                                            <div class="row g-2 mt-2">
+                                                <div class="col-md-6">
+                                                    <div class="form-floating">
+                                                        <select class="form-select" id="pixKeyType" name="pixKeyType">
+                                                            <option value="CPF">CPF</option>
+                                                            <option value="CNPJ">CNPJ</option>
+                                                            <option value="EMAIL">Email</option>
+                                                            <option value="TELEFONE">Telefone</option>
+                                                            <option value="ALEATORIA">Aleatória</option>
+                                                        </select>
+                                                        <label for="pixKeyType">Tipo de Chave</label>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <div class="form-floating">
+                                                        <input type="text" class="form-control" id="pixRecipient" 
+                                                            name="pixRecipient" placeholder="Beneficiario" value="">
+                                                        <label for="pixRecipient">Nome do Beneficiario</label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="row g-2 mt-3">
+                                                <div class="col-md-12 text-center">
+                                                    <div id="qrCodeContainer" class="mb-3">
+                                                        <canvas id="pixQRCode"></canvas>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="row g-2 mt-2">
+                                                <div class="col-md-12">
+                                                    <div class="input-group">
+                                                        <span class="input-group-text"><i class="bi bi-clipboard"></i> Código PIX Copia e Cola</span>
+                                                        <input type="text" class="form-control" id="pixCopiaCola" readonly>
+                                                        <button class="btn btn-primary" type="button" onclick="copyPixCode()">
+                                                            <i class="bi bi-clipboard-check"></i> Copiar
+                                                        </button>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
-                                        <div class="row g-2 mt-2">
-                                            <div class="col-6">
-                                                <button type="button" class="btn-finalize">Adicionar</button>
+                                        
+                                        <!-- Credit Card Section -->
+                                        <div id="cardPaymentSection" class="mt-3" style="display: none;">
+                                            <div class="alert alert-secondary">
+                                                <h5><i class="bi bi-credit-card"></i> Pagamento com Cartão</h5>
+                                            </div>
+                                            <div class="row g-2">
+                                                <div class="col-md-6">
+                                                    <div class="form-floating">
+                                                        <select class="form-select" id="parcelas" name="parcelas">
+                                                            <option value="1">1x</option>
+                                                            <option value="2">2x</option>
+                                                            <option value="3">3x</option>
+                                                            <option value="4">4x</option>
+                                                            <option value="5">5x</option>
+                                                            <option value="6">6x</option>
+                                                            <option value="7">7x</option>
+                                                            <option value="8">8x</option>
+                                                            <option value="9">9x</option>
+                                                            <option value="10">10x</option>
+                                                            <option value="11">11x</option>
+                                                            <option value="12">12x</option>
+                                                        </select>
+                                                        <label for="parcelas">Quantidade de Parcelas</label>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <div class="form-floating">
+                                                        <input type="text" class="form-control" id="cardNumber"
+                                                            name="cardNumber" placeholder="Número do Cartão">
+                                                        <label for="cardNumber">Número do Cartão</label>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
-                                        <div class="row g-2 mt-2">
-
+                                        
+                                        <div class="row g-2 mt-3">
+                                            <div class="col-12">
+                                                <div class="alert alert-success">
+                                                    <h6 class="mb-1">Total a Pagar: <strong id="paymentTotal">R$ 0,00</strong></h6>
+                                                    <small class="text-muted">Troco: <span id="troco">R$ 0,00</span></small>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                     <div class="modal-footer">
-                                        <button type="button" class="btn-finalize">Concluir</button>
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                            Cancelar
+                                        </button>
+                                        <button type="button" class="btn-finalize" onclick="finalizeSale()">
+                                            <i class="fas fa-check"></i> Concluir Venda
+                                        </button>
                                     </div>
                                 </div>
                             </div>

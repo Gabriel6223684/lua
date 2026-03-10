@@ -118,6 +118,12 @@ class Fornecedor extends Base
         $orderField = $fields[$order];
         #O termo pesquisado
         $term = $form['search']['value'];
+        
+        // Primeiro, conta o total de registros (sem filtros)
+        $totalQuery = SelectQuery::select('id')->from('supplier');
+        $recordsTotal = $totalQuery->count();
+        
+        // Query com filtros para dados
         $query = SelectQuery::select('id,nome_fantasia,sobrenome_razao,cpf_cnpj,rg_ie,ativo')->from('supplier');
         if (!is_null($term) && ($term !== '')) {
             $query->where('nome_fantasia', 'ilike', "%{$term}%", 'or')
@@ -126,10 +132,17 @@ class Fornecedor extends Base
                 ->where('rg_ie', 'ilike', "%{$term}%", 'or')
                 ->where('ativo', 'ilike', "%{$term}%");
         }
+        
+        // Conta registros filtrados
+        $filteredQuery = clone $query;
+        $recordsFiltered = $filteredQuery->count();
+        
+        // Busca os dados paginados
         $suppliers = $query
             ->order($orderField, $orderType)
             ->limit($length, $start)
             ->fetchAll();
+            
         $suppliersData = [];
         foreach ($suppliers as $key => $value) {
             $suppliersData[$key] = [
@@ -149,8 +162,8 @@ class Fornecedor extends Base
         }
         $data = [
             'status' => true,
-            'recordsTotal' => count($suppliers),
-            'recordsFiltered' => count($suppliers),
+            'recordsTotal' => $recordsTotal,
+            'recordsFiltered' => $recordsFiltered,
             'data' => $suppliersData
         ];
         $payload = json_encode($data);

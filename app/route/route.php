@@ -114,5 +114,8 @@ $app->group('/pagamento', function (RouteCollectorProxy $group) {
 $app->group('/ajusteestoque', function (RouteCollectorProxy $group) {
     $group->get('/lista', AdjustmentStock::class . ':lista');
     $group->get('/cadastro', AdjustmentStock::class . ':cadastro');
+    $group->get('/print', AdjustmentStock::class . ':print');
     $group->post('/listajusteestoque', AdjustmentStock::class . ':listajusteestoque');
+    $group->post('/ajustar', AdjustmentStock::class . ':ajustarestoque');
+    $group->post('/delete', AdjustmentStock::class . ':delete');
 });

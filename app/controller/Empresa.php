@@ -117,6 +117,12 @@ class Empresa extends Base
         $orderField = $fields[$order];
         #O termo pesquisado
         $term = $form ['search']['value'];
+        
+        // Primeiro, conta o total de registros (sem filtros)
+        $totalQuery = SelectQuery::select('id')->from('company');
+        $recordsTotal = $totalQuery->count();
+        
+        // Query com filtros para dados
         $query = SelectQuery::select('id,nome_fantasia,sobrenome_razao,cpf_cnpj,rg_ie,ativo')->from('company');
         if (!is_null($term) && ($term !== '')) {
             $query->where('nome_fantasia', 'ilike', "%{$term}%", 'or')
@@ -125,10 +131,17 @@ class Empresa extends Base
             ->where('rg_ie', 'ilike', "%{$term}%", 'or')
             ->where('ativo', 'ilike', "%{$term}%");
         }
+        
+        // Conta registros filtrados
+        $filteredQuery = clone $query;
+        $recordsFiltered = $filteredQuery->count();
+        
+        // Busca os dados paginados
         $companys = $query
         ->order($orderField, $orderType)
         ->limit($length, $start)
         ->fetchAll();
+        
         $companysData = [];
         foreach($companys as $key => $value) {
             $companysData[$key] = [
@@ -148,8 +161,8 @@ class Empresa extends Base
         }
         $data = [
             'status' => true,
-            'recordsTotal' => count($companys),
-            'recordsFiltered' => count($companys),
+            'recordsTotal' => $recordsTotal,
+            'recordsFiltered' => $recordsFiltered,
             'data' => $companysData
         ];
         $payload = json_encode($data);

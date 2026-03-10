@@ -162,6 +162,47 @@ class SelectQuery
         }
     }
 
+    // Executa e retorna o total de registros (para DataTables).
+    public function count(): int
+    {
+        // Variável da query.
+        $query = '';
+        
+        // Salva os campos originais
+        $originalFields = $this->fields;
+        
+        // Substitui os campos por COUNT(*)
+        $this->fields = 'count(*) as total';
+        
+        // Remove LIMIT e OFFSET para contar todos os registros
+        $this->limit = 0;
+        $this->offset = 0;
+        $this->limits = '';
+        
+        // Monta a string SQL.
+        $query = $this->createQuery();
+
+        // Bloco try-catch.
+        try {
+            // Obtém a conexão PDO.
+            $connection = Connection::connection();
+            // Prepara a consulta.
+            $prepare = $connection->prepare($query);
+            // Executa com os binds.
+            $prepare->execute($this->binds ?? []);
+            // Retorna o total.
+            $result = $prepare->fetch(\PDO::FETCH_ASSOC);
+            return (int) $result['total'];
+            // Captura exceções.
+        } catch (\Exception $e) {
+            // Lança uma exceção de "Restrição".
+            throw new \Exception("Restrição: " . $e->getMessage());
+        } finally {
+            // Restaura os campos originais
+            $this->fields = $originalFields;
+        }
+    }
+
     // Executa e retorna todas as linhas (PDO::fetchAll).
     public function fetchAll()
     {

@@ -203,18 +203,31 @@ class PaymentTerms extends Base
             ];
             $orderField = isset($fields[$order]) ? $fields[$order] : 'id';
             
+            // Primeiro, conta o total de registros (sem filtros)
+            $totalQuery = SelectQuery::select('id')->from('payment_terms');
+            $recordsTotal = $totalQuery->count();
+            
+            // Query com filtros para dados
             $query = SelectQuery::select('id,codigo,titulo,atalho')->from('payment_terms');
             if (!is_null($term) && ($term !== '')) {
                 $query->where('payment_terms.codigo', 'ilike', "%{$term}%", 'or')
                     ->where('payment_terms.titulo', 'ilike', "%{$term}%", 'or')
                     ->where('payment_terms.atalho', 'ilike', "%{$term}%");
             }
+            
+            // Conta registros filtrados
+            $filteredQuery = clone $query;
+            $recordsFiltered = $filteredQuery->count();
+            
             if (!is_null($order) && ($order !== '')) {
                 $query->order($orderField, $orderType);
             }
+            
+            // Busca os dados paginados
             $clientes = $query
                 ->limit($length, $start)
                 ->fetchAll();
+                
             $clienteData = [];
             foreach ($clientes as $key => $value) {
                 $clienteData[$key] = [
@@ -228,8 +241,8 @@ class PaymentTerms extends Base
             }
             $data = [
                 'status' => true,
-                'recordsTotal' => count($clientes),
-                'recordsFiltered' => count($clientes),
+                'recordsTotal' => $recordsTotal,
+                'recordsFiltered' => $recordsFiltered,
                 'data' => $clienteData
             ];
             return $this->SendJson($response, $data, 200);

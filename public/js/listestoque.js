@@ -65,4 +65,71 @@ async function Delete(id) {
     });
     tabela.ajax.reload();
 }
-window.Delete = Delete;     
+window.Delete = Delete;
+
+// Função para ajustar o estoque de um produto
+async function ajustarEstoque(idProduto) {
+    const inputQuantidade = document.getElementById('quantidade_ajuste_' + idProduto);
+    if (!inputQuantidade || !inputQuantidade.value) {
+        Swal.fire({
+            title: "Erro!",
+            icon: "error",
+            html: "Informe a nova quantidade!",
+            timer: 3000,
+            timerProgressBar: true
+        });
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('id', idProduto);
+    formData.append('quantidade', inputQuantidade.value);
+
+    try {
+        const response = await fetch('/ajusteestoque/ajustar', {
+            method: 'POST',
+            body: formData
+        });
+
+        const data = await response.json();
+
+        if (data.status) {
+            Swal.fire({
+                title: "Sucesso!",
+                icon: "success",
+                html: data.msg,
+                timer: 3000,
+                timerProgressBar: true
+            }).then(() => {
+                // Fechar o modal
+                const modal = document.getElementById('modalstock' + idProduto);
+                if (modal) {
+                    const modalInstance = bootstrap.Modal.getInstance(modal);
+                    if (modalInstance) {
+                        modalInstance.hide();
+                    }
+                }
+                // Recarregar a tabela
+                tabela.ajax.reload();
+            });
+        } else {
+            Swal.fire({
+                title: "Erro!",
+                icon: "error",
+                html: data.msg,
+                timer: 3000,
+                timerProgressBar: true
+            });
+        }
+    } catch (error) {
+        Swal.fire({
+            title: "Erro!",
+            icon: "error",
+            html: "Ocorreu um erro ao ajustar o estoque: " + error.message,
+            timer: 3000,
+            timerProgressBar: true
+        });
+    }
+}
+
+window.ajustarEstoque = ajustarEstoque;

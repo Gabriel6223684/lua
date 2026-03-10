@@ -142,6 +142,12 @@ class Produto extends Base
         $orderField = $fields[$order];
         #O termo pesquisado
         $term = $form['search']['value'];
+        
+        // Primeiro, conta o total de registros (sem filtros)
+        $totalQuery = SelectQuery::select('id')->from('view_product');
+        $recordsTotal = $totalQuery->count();
+        
+        // Query com filtros para dados
         $query = SelectQuery::select()->from('view_product');
         if (!is_null($term) && ($term !== '')) {
             $query
@@ -151,10 +157,17 @@ class Produto extends Base
                 ->where('codigo_barra', 'ilike', "%{$term}%", 'or')
                 ->where('valor', 'ilike', "%{$term}%", 'or');
         }
+        
+        // Conta registros filtrados
+        $filteredQuery = clone $query;
+        $recordsFiltered = $filteredQuery->count();
+        
+        // Busca os dados paginados
         $product = $query
             ->order($orderField, $orderType)
             ->limit($length, $start)
             ->fetchAll();
+            
         $produtoData = [];
         foreach ($product as $key => $value) {
             $estoque = isset($value['estoque']) ? intval($value['estoque']) : 0;
@@ -180,8 +193,8 @@ class Produto extends Base
         }
         $data = [
             'status' => true,
-            'recordsTotal' => count($product),
-            'recordsFiltered' => count($product),
+            'recordsTotal' => $recordsTotal,
+            'recordsFiltered' => $recordsFiltered,
             'data' => $produtoData
         ];
         $payload = json_encode($data);

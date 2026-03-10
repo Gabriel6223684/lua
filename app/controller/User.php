@@ -79,6 +79,12 @@ class User extends Base
         $orderField = $fields[$order];
         #O termo pesquisado
         $term = $form['search']['value'];
+        
+        // Primeiro, conta o total de registros (sem filtros)
+        $totalQuery = SelectQuery::select('id')->from('users');
+        $recordsTotal = $totalQuery->count();
+        
+        // Query com filtros para dados
         $query = SelectQuery::select('id,nome,sobrenome,cpf,rg,senha')->from('users');
         if (!is_null($term) && ($term !== '')) {
             $query->where('nome', 'ilike', "%{$term}%", 'or')
@@ -86,10 +92,17 @@ class User extends Base
                 ->where('rg', 'ilike', "%{$term}%", 'or')
                 ->where('cpf', 'ilike', "%{$term}%");
         }
+        
+        // Conta registros filtrados
+        $filteredQuery = clone $query;
+        $recordsFiltered = $filteredQuery->count();
+        
+        // Busca os dados paginados
         $users = $query
             ->order($orderField, $orderType)
             ->limit($length, $start)
             ->fetchAll();
+            
         $userData = [];
         foreach ($users as $key => $value) {
             $userData[$key] = [
@@ -108,8 +121,8 @@ class User extends Base
         }
         $data = [
             'status' => true,
-            'recordsTotal' => count($users),
-            'recordsFiltered' => count($users),
+            'recordsTotal' => $recordsTotal,
+            'recordsFiltered' => $recordsFiltered,
             'data' => $userData
         ];
         $payload = json_encode($data);

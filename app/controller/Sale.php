@@ -321,7 +321,7 @@ class Sale extends Base
                     ->where('total_bruto', 'ilike', "%{$term}%", 'or')
                     ->where('total_liquido', 'ilike', "%{$term}%");
             }
-            $totalRecords = count($countQuery->fetchAll());
+            $totalRecords = $countQuery->count();
             
             # Query com paginação
             $query = SelectQuery::select('id, id_cliente, total_bruto, desconto, total_liquido, observacao, created_at')

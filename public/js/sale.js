@@ -570,6 +570,360 @@ async function selectProduct(productId) {
 // Função global para selecionar produto
 window.selectProduct = selectProduct;
 
+// ==========================================
+// FUNÇÕES DE PAGAMENTO (PIX, Cartão, etc)
+// ==========================================
+
+// Event listener para mudança na forma de pagamento
+document.addEventListener('DOMContentLoaded', () => {
+  const formaPagamento = document.getElementById('formaPagamento');
+  if (formaPagamento) {
+    formaPagamento.addEventListener('change', (e) => {
+      const pixSection = document.getElementById('pixPaymentSection');
+      const cardSection = document.getElementById('cardPaymentSection');
+      
+      if (e.target.value === 'PIX') {
+        pixSection.style.display = 'block';
+        cardSection.style.display = 'none';
+        generatePixCode();
+      } else if (e.target.value === 'CARTAO_CREDITO' || e.target.value === 'CARTAO_DEBITO') {
+        pixSection.style.display = 'none';
+        cardSection.style.display = 'block';
+      } else {
+        pixSection.style.display = 'none';
+        cardSection.style.display = 'none';
+      }
+    });
+  }
+  
+  // Atualizar total do pagamento quando o valor pago mudar
+  const valorPago = document.getElementById('valorPago');
+  if (valorPago) {
+    valorPago.addEventListener('input', (e) => {
+      updatePaymentTotal();
+    });
+  }
+});
+
+// Função para gerar o código PIX Copia e Cola
+function generatePixCode() {
+  const totalAmount = document.getElementById('total-amount');
+  const pixKey = document.getElementById('pixKey');
+  const pixRecipient = document.getElementById('pixRecipient');
+  const pixCopiaCola = document.getElementById('pixCopiaCola');
+  
+  if (!totalAmount || !pixKey || !pixRecipient || !pixCopiaCola) return;
+  
+  // Obter o valor total (remover R$ e converter)
+  let valor = totalAmount.textContent || 'R$ 0,00';
+  valor = valor.replace('R$', '').replace(/\s/g, '').replace(',', '.');
+  const valorNum = parseFloat(valor) || 0;
+  
+  // Obter dados do formulário
+  const key = pixKey.value || '12345678909';
+  const recipient = pixRecipient.value || 'Empresa Demo';
+  
+  // Gerar código PIX Copia e Cola (formato简单 para demonstração)
+  const pixCode = generatePixCopiaCola(key, recipient, valorNum);
+  
+  pixCopiaCola.value = pixCode;
+  
+  // Gerar QR Code
+  generateQRCode(pixCode);
+}
+
+// Função para gerar o código PIX Copia e Cola (formato válido para Brazil)
+function generatePixCopiaCola(key, recipient, amount) {
+  // Formato simplificado do PIX Copia e Cola
+  const format = (id, value) => {
+    const len = String(value).length;
+    return String(len).padStart(2, '0') + id + String(value);
+  };
+  
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  const hour = String(now.getHours()).padStart(2, '0');
+  const minute = String(now.getMinutes()).padStart(2, '0');
+  const second = String(now.getSeconds()).padStart(2, '0');
+  const timestamp = year + month + day + hour + minute + second;
+  
+  // GUID único para a transação
+  const gui = 'BR.GOV.BCB.PIX';
+  const keyType = document.getElementById('pixKeyType')?.value || 'CPF';
+  
+  // Construir o código PIX
+  let pix = '000201';
+  pix += '010212';  // Payload Format Indicator
+  pix += format('26', gui);  // GUI
+  pix += format('01', key);  // Chave PIX
+  pix += '0303';  // Merchant Category Code
+  pix += format('54', amount.toFixed(2));  // Transaction Amount
+  pix += format('99', timestamp);  // Transaction ID
+  pix += format('58', 'BR');  // Country Code
+  pix += format('59', recipient.substring(0, 25));  // Merchant Name
+  pix += format('60', 'Sao Paulo');  // Merchant City
+  pix += '6304';  // CRC
+  
+  // Calcular CRC16 simplificado
+  const crc = calculateCRC16(pix);
+  pix += crc;
+  
+  return pix;
+}
+
+// Função para calcular CRC16 para o código PIX
+function calculateCRC16(str) {
+  let crc = 0xFFFF;
+  const polynomial = 0x1021;
+  
+  for (let i = 0; i < str.length; i++) {
+    crc ^= (str.charCodeAt(i) << 8);
+    for (let j = 0; j < 8; j++) {
+      if ((crc & 0x8000) !== 0) {
+        crc = ((crc << 1) ^ polynomial) & 0xFFFF;
+      } else {
+        crc = (crc << 1) & 0xFFFF;
+      }
+    }
+  }
+  
+  return crc.toString(16).toUpperCase().padStart(4, '0');
+}
+
+// Função para gerar QR Code
+function generateQRCode(text) {
+  const canvas = document.getElementById('pixQRCode');
+  if (!canvas) return;
+  
+  const ctx = canvas.getContext('2d');
+  const size = 200;
+  canvas.width = size;
+  canvas.height = size;
+  
+  // Limpar canvas
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fillRect(0, 0, size, size);
+  
+  // Gerar QR Code simples (para demonstração)
+  // Em produção, use uma biblioteca como qrcode.js ou qrcode-generator
+  ctx.fillStyle = '#000000';
+  ctx.font = '12px Arial';
+  ctx.textAlign = 'center';
+  ctx.fillText('QR Code PIX', size/2, size/2 - 10);
+  ctx.fillText('R$ ' + document.getElementById('total-amount')?.textContent?.replace('R$ ', '') || '0,00', size/2, size/2 + 10);
+  
+  // Desenhar uma representação simples do QR Code
+  const cellSize = 4;
+  const qrSize = 21;
+  const offset = (size - (qrSize * cellSize)) / 2;
+  
+  // Gerar padrão simples baseado no texto
+  for (let i = 0; i < qrSize; i++) {
+    for (let j = 0; j < qrSize; j++) {
+      // Criar um padrão pseudo-aleatório baseado no texto
+      const charCode = text.charCodeAt((i * qrSize + j) % text.length);
+      if (charCode % 2 === 0) {
+        ctx.fillRect(offset + j * cellSize, offset + i * cellSize, cellSize - 1, cellSize - 1);
+      }
+    }
+  }
+}
+
+// Função para atualizar o total do pagamento
+function updatePaymentTotal() {
+  const valorPago = document.getElementById('valorPago');
+  const paymentTotal = document.getElementById('paymentTotal');
+  const troco = document.getElementById('troco');
+  const totalAmount = document.getElementById('total-amount');
+  
+  if (!valorPago || !paymentTotal || !troco || !totalAmount) return;
+  
+  // Obter o valor total
+  let total = totalAmount.textContent || 'R$ 0,00';
+  total = total.replace('R$', '').replace(/\s/g, '').replace(',', '.');
+  const totalNum = parseFloat(total) || 0;
+  
+  // Obter o valor pago (converter de formato brasileiro)
+  let pago = valorPago.value || '0,00';
+  pago = pago.replace('R$', '').replace(/\s/g, '').replace(',', '.');
+  const pagoNum = parseFloat(pago) || 0;
+  
+  // Calcular troco
+  const trocoNum = pagoNum - totalNum;
+  
+  paymentTotal.textContent = totalNum.toLocaleString('pt-BR', {
+    style: 'currency',
+    currency: 'BRL'
+  });
+  
+  troco.textContent = trocoNum.toLocaleString('pt-BR', {
+    style: 'currency',
+    currency: 'BRL'
+  });
+  
+  // Atualizar cor do troco
+  if (trocoNum < 0) {
+    troco.classList.add('text-danger');
+    troco.classList.remove('text-success');
+  } else {
+    troco.classList.add('text-success');
+    troco.classList.remove('text-danger');
+  }
+}
+
+// Função para copiar o código PIX
+function copyPixCode() {
+  const pixCopiaCola = document.getElementById('pixCopiaCola');
+  if (!pixCopiaCola || !pixCopiaCola.value) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'Atenção',
+      text: 'Gerando código PIX...',
+      timer: 2000,
+      progressBar: true
+    });
+    return;
+  }
+  
+  navigator.clipboard.writeText(pixCopiaCola.value).then(() => {
+    Swal.fire({
+      icon: 'success',
+      title: 'Copiado!',
+      text: 'Código PIX copiado para a área de transferência!',
+      timer: 2000,
+      progressBar: true
+    });
+  }).catch(err => {
+    console.error('Erro ao copiar:', err);
+    Swal.fire({
+      icon: 'error',
+      title: 'Erro',
+      text: 'Não foi possível copiar o código PIX.',
+      timer: 2000,
+      progressBar: true
+    });
+  });
+}
+
+// Tornar função global
+window.copyPixCode = copyPixCode;
+
+// Função para finalizar a venda
+async function finalizeSale() {
+  const formaPagamento = document.getElementById('formaPagamento');
+  const totalAmount = document.getElementById('total-amount');
+  
+  if (!formaPagamento || !formaPagamento.value) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'Atenção',
+      text: 'Selecione a forma de pagamento!',
+      timer: 3000,
+      progressBar: true
+    });
+    return;
+  }
+  
+  // Obter o valor total
+  let total = totalAmount.textContent || 'R$ 0,00';
+  total = total.replace('R$', '').replace(/\s/g, '').replace(',', '.');
+  const totalNum = parseFloat(total) || 0;
+  
+  // Validar pagamento
+  const valorPago = document.getElementById('valorPago');
+  let pago = valorPago?.value || '0,00';
+  pago = pago.replace('R$', '').replace(/\s/g, '').replace(',', '.');
+  const pagoNum = parseFloat(pago) || 0;
+  
+  if (formaPagamento.value === 'DINHEIRO' && pagoNum < totalNum) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'Atenção',
+      text: 'Valor pago é menor que o total da venda!',
+      timer: 3000,
+      progressBar: true
+    });
+    return;
+  }
+  
+  // Coletar dados do pagamento
+  const paymentData = {
+    formaPagamento: formaPagamento.value,
+    valorPago: pagoNum,
+    valorTotal: totalNum,
+    troco: pagoNum - totalNum
+  };
+  
+  // Se for PIX, adicionar dados adicionais
+  if (formaPagamento.value === 'PIX') {
+    paymentData.pixKey = document.getElementById('pixKey')?.value || '';
+    paymentData.pixKeyType = document.getElementById('pixKeyType')?.value || 'CPF';
+    paymentData.pixRecipient = document.getElementById('pixRecipient')?.value || '';
+    paymentData.pixCopiaCola = document.getElementById('pixCopiaCola')?.value || '';
+  }
+  
+  // Se for cartão, adicionar dados adicionais
+  if (formaPagamento.value === 'CARTAO_CREDITO' || formaPagamento.value === 'CARTAO_DEBITO') {
+    paymentData.parcelas = document.getElementById('parcelas')?.value || 1;
+    paymentData.cardNumber = document.getElementById('cardNumber')?.value || '';
+  }
+  
+  // Adicionar dados do pagamento ao formulário
+  const form = document.getElementById('form');
+  const paymentDataInput = document.createElement('input');
+  paymentDataInput.type = 'hidden';
+  paymentDataInput.name = 'paymentData';
+  paymentDataInput.value = JSON.stringify(paymentData);
+  form.appendChild(paymentDataInput);
+  
+  try {
+    const response = await Requests.SetForm("form").Post("/venda/update");
+    
+    if (response.status) {
+      Swal.fire({
+        icon: 'success',
+        title: 'Venda Finalizada!',
+        text: 'A venda foi registrada com sucesso!',
+        timer: 3000,
+        progressBar: true
+      }).then(() => {
+        // Limpar formulário e redirecionar
+        window.location.href = '/venda/lista';
+      });
+    } else {
+      Swal.fire({
+        icon: 'error',
+        title: 'Erro',
+        text: response.msg || 'Não foi possível finalizar a venda.',
+        timer: 3000,
+        progressBar: true
+      });
+    }
+  } catch (error) {
+    Swal.fire({
+      icon: 'error',
+      title: 'Erro',
+      text: error.message || 'Ocorreu um erro ao finalizar a venda.',
+      timer: 3000,
+      progressBar: true
+    });
+  }
+  
+  // Remover input temporário
+  if (paymentDataInput) {
+    form.removeChild(paymentDataInput);
+  }
+}
+
+// Tornar função global
+window.finalizeSale = finalizeSale;
+
+// Tornar funções globais
+window.generatePixCode = generatePixCode;
+window.updatePaymentTotal = updatePaymentTotal;
+
 // Configurar o evento de busca no input
 document.addEventListener('DOMContentLoaded', () => {
   const searchInput = document.getElementById('searchProduct');
@@ -584,6 +938,17 @@ document.addEventListener('DOMContentLoaded', () => {
   if (pesquisaModal) {
     pesquisaModal.addEventListener('shown.bs.modal', () => {
       loadProducts();
+    });
+  }
+  
+  // Gerar código PIX quando o modal de pagamento for aberto
+  const pagamentoModal = document.getElementById('pagamentoVenda');
+  if (pagamentoModal) {
+    pagamentoModal.addEventListener('shown.bs.modal', () => {
+      const formaPagamento = document.getElementById('formaPagamento');
+      if (formaPagamento && formaPagamento.value === 'PIX') {
+        generatePixCode();
+      }
     });
   }
 });
