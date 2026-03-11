@@ -310,39 +310,41 @@ class Produto extends Base
                 return $this->SendJson($response, ['status' => false, 'msg' => 'Por favor informe uma quantidade válida', 'id' => 0], 500);
             }
 
-            // Buscar o estoque atual
-            $produto = SelectQuery::select('id')->from('view_product')->where('id', '=', $id)->fetch();
-            if (!$produto) {
-                return $this->SendJson($response, ['status' => false, 'msg' => 'Produto não encontrado', 'id' => 0], 404);
-            }
-
             // Buscar quantidade atual no estoque
             $estoqueAtual = SelectQuery::select()
                 ->from('mvw_estoque')
                 ->where('id_produto', '=', $id)
                 ->fetch();
+            //Caso o novo estoque seja igual ao estoque atual encerramos o processo
+            if (floatval($estoqueAtual['estoque_atual']) === floatval($novaQuantidade)) {
+                return $this->SendJson($response, ['status' => true, 'msg' => 'O estoque atual já está com a quantidade informada', 'id' => 0], 200);
+            }
 
             $quantidadeAtual = 0;
             $quantidadeAtual = $estoqueAtual['estoque_atual'] ? floatval($estoqueAtual['estoque_atual']) : 0;
-
             // Calcular a diferença
             $diferenca = abs($novaQuantidade - $quantidadeAtual);
-
             // Registrar a movimentação de estoque
             $FieldAndValues = [
                 'id_produto' => $id,
-                'quantidade_entrada' => $diferenca,
                 'observacao' => 'Ajuste de estoque',
-                'tipo' => $diferenca >= 0 ? 'ENTRADA' : 'SAIDA',
+                'tipo' => ($novaQuantidade > $quantidadeAtual) ? 'ENTRADA' : 'SAIDA',
                 'origem_movimento' => 'AJUSTE_MANUAL'
             ];
-
+            //Aqui temos uma entrada no estoque
+            if ($novaQuantidade > $quantidadeAtual) {
+                $FieldAndValues['quantidade_entrada'] = $diferenca;
+                $FieldAndValues['quantidade_saida'] = '0';
+            }
+            //Aqui temos uma saída no estoque
+            if ($novaQuantidade < $quantidadeAtual) {
+                $FieldAndValues['quantidade_saida'] = $diferenca;
+                $FieldAndValues['quantidade_entrada'] = '0';
+            }
             $IsSave = InsertQuery::table('stock_movement')->save($FieldAndValues);
-
             if (!$IsSave) {
                 return $this->SendJson($response, ['status' => false, 'msg' => 'Erro ao ajustar estoque: ' . $IsSave, 'id' => 0], 403);
             }
-
             return $this->SendJson($response, ['status' => true, 'msg' => 'Estoque ajustado com sucesso!', 'id' => $id]);
         } catch (\Exception $e) {
             return $this->SendJson($response, ['status' => false, 'msg' => 'Erro ao ajustar estoque: ' . $e->getMessage(), 'id' => 0], 500);

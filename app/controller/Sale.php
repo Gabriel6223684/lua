@@ -825,5 +825,177 @@ class Sale extends Base
             return false;
         }
     }
+
+    /**
+     * Atualiza apenas os dados de pagamento da venda (editar/salvar)
+     */
+    public function updatePayment($request, $response)
+    {
+        try {
+            $form = $request->getParsedBody();
+            $id = $form['id'] ?? null;
+            $paymentData = isset($form['paymentData']) ? json_decode($form['paymentData'], true) : null;
+            
+            if (empty($id) || is_null($id)) {
+                return $this->SendJson($response, [
+                    'status' => false,
+                    'msg' => 'Restrição: O ID da venda é obrigatório!',
+                    'id' => 0
+                ], 403);
+            }
+            
+            if (!$paymentData) {
+                return $this->SendJson($response, [
+                    'status' => false,
+                    'msg' => 'Restrição: Dados do pagamento são obrigatórios!',
+                    'id' => 0
+                ], 403);
+            }
+            
+            // Validar forma de pagamento
+            $formaPagamento = $paymentData['formaPagamento'] ?? '';
+            if (empty($formaPagamento)) {
+                return $this->SendJson($response, [
+                    'status' => false,
+                    'msg' => 'Restrição: Forma de pagamento é obrigatória!',
+                    'id' => 0
+                ], 403);
+            }
+            
+            // Validar valor pago conforme forma de pagamento
+            $valorTotal = floatval($paymentData['valorTotal'] ?? 0);
+            $valorPago = floatval($paymentData['valorPago'] ?? 0);
+            
+            if ($formaPagamento === 'DINHEIRO' && $valorPago < $valorTotal) {
+                return $this->SendJson($response, [
+                    'status' => false,
+                    'msg' => 'Restrição: Valor pago é menor que o total da venda!',
+                    'id' => 0
+                ], 403);
+            }
+            
+            // Buscar a venda para verificar se existe
+            $sale = SelectQuery::select()->from('sale')->where('id', '=', $id)->fetch();
+            if (!$sale) {
+                return $this->SendJson($response, [
+                    'status' => false,
+                    'msg' => 'Restrição: Venda não encontrada!',
+                    'id' => 0
+                ], 404);
+            }
+            
+            // Atualizar a venda com os dados do pagamento
+            $FieldAndValues = [
+                'forma_pagamento' => $formaPagamento,
+                'status' => 'PENDENTE'
+            ];
+            
+            // Adicionar observação do pagamento
+            $obsPagamento = '';
+            switch ($formaPagamento) {
+                case 'PIX':
+                    $obsPagamento = 'PIX - Chave: ' . ($paymentData['pixKey'] ?? 'N/A');
+                    break;
+                case 'CARTAO_CREDITO':
+                    $obsPagamento = 'Cartão Crédito - ' . ($paymentData['parcelas'] ?? 1) . 'x';
+                    break;
+                case 'CARTAO_DEBITO':
+                    $obsPagamento = 'Cartão Débito';
+                    break;
+                case 'DINHEIRO':
+                    $troco = $valorPago - $valorTotal;
+                    $obsPagamento = 'Dinheiro - Pago: R$ ' . number_format($valorPago, 2, ',', '.') . ' - Troco: R$ ' . number_format($troco, 2, ',', '.');
+                    break;
+                case 'BOLETO':
+                    $obsPagamento = 'Boleto';
+                    break;
+            }
+            
+            // Manter observação anterior e adicionar info do pagamento
+            $observacaoAtual = $sale['observacao'] ?? '';
+            // Se já tem info de pagamento, substituir; senão adicionar
+            if (strpos($observacaoAtual, 'Pagamento:') !== false) {
+                // Remover info de pagamento anterior e adicionar nova
+                $observacaoAtual = preg_replace('/\s*\|\s*Pagamento:.*$/i', '', $observacaoAtual);
+            }
+            $FieldAndValues['observacao'] = trim($observacaoAtual) . ' | Pagamento: ' . $obsPagamento;
+            
+            $isUpdated = UpdateQuery::table('sale')->set($FieldAndValues)->where('id', '=', $id)->update();
+            
+            if (!$isUpdated) {
+                return $this->SendJson($response, [
+                    'status' => false,
+                    'msg' => 'Restrição: Erro ao salvar dados do pagamento!',
+                    'id' => 0
+                ], 500);
+            }
+            
+            return $this->SendJson($response, [
+                'status' => true,
+                'msg' => 'Dados do pagamento salvos com sucesso!',
+                'id' => $id,
+                'pagamento' => $paymentData
+            ]);
+            
+        } catch (\Exception $e) {
+            return $this->SendJson($response, [
+                'status' => false,
+                'msg' => 'Erro ao salvar pagamento: ' . $e->getMessage(),
+                'id' => 0
+            ], 500);
+        }
+    }
+
+    /**
+     * Carrega os dados de pagamento de uma venda para edição
+     */
+    public function loadPayment($request, $response)
+    {
+        try {
+            $form = $request->getParsedBody();
+            $id = $form['id'] ?? null;
+            
+            if (empty($id) || is_null($id)) {
+                return $this->SendJson($response, [
+                    'status' => false,
+                    'msg' => 'Restrição: O ID da venda é obrigatório!',
+                    'id' => 0
+                ], 403);
+            }
+            
+            // Buscar a venda
+            $sale = SelectQuery::select('id', 'forma_pagamento', 'status', 'total_liquido', 'observacao')
+                ->from('sale')
+                ->where('id', '=', $id)
+                ->fetch();
+            
+            if (!$sale) {
+                return $this->SendJson($response, [
+                    'status' => false,
+                    'msg' => 'Restrição: Venda não encontrada!',
+                    'id' => 0
+                ], 404);
+            }
+            
+            return $this->SendJson($response, [
+                'status' => true,
+                'msg' => 'Dados de pagamento carregados com sucesso!',
+                'id' => $id,
+                'data' => [
+                    'forma_pagamento' => $sale['forma_pagamento'] ?? '',
+                    'status' => $sale['status'] ?? 'PENDENTE',
+                    'total_liquido' => floatval($sale['total_liquido'] ?? 0),
+                    'observacao' => $sale['observacao'] ?? ''
+                ]
+            ]);
+            
+        } catch (\Exception $e) {
+            return $this->SendJson($response, [
+                'status' => false,
+                'msg' => 'Erro ao carregar pagamento: ' . $e->getMessage(),
+                'id' => 0
+            ], 500);
+        }
+    }
 }
 

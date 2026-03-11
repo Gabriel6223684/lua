@@ -1,47 +1,29 @@
-# TODO - Correção DataTables
+# TODO - Correções do Sistema
 
-## Objetivo
-Corrigir URLs de linguagem do DataTables para versão 2.3.7
+## PaymentTerms - Editar/Salvar
 
-## Tarefas
-- [x] Corrigir listestoque.js
-- [x] Corrigir listsale.js
-- [x] Corrigir listacliente.js
-- [x] Corrigir listaempresa.js
-- [x] Corrigir listafornecedor.js
-- [x] Corrigir listauser.js
-- [x] Corrigir listaproduto.js
-- [x] Corrigir listpaymentterms.js
+### Problema Identificado
+- A rota `/pagamento/update` não existia no arquivo `route.php`
+- O JavaScript tentava chamar `/pagamento/update` para salvar alterações, mas a rota não estava definida
 
-## Conclusão
-- [x] Todas as correções foram aplicadas
+### Correção Aplicada
+- ✅ Adicionada rota `$group->post('/update', PaymentTerms::class . ':update');` no arquivo `app/route/route.php`
+
+### Status
+- ✅ Correção concluída
 
 ---
 
-## Correções Adicionais no Backend
+## Sale - Pagamento Editar/Salvar (Tarefa Anterior)
 
-### SelectQuery.php
-- Corrigido método `where()` para não adicionar lógica AND/OR na primeira condição
-- Adicionado sistema de geração de nomes únicos para placeholders (evita conflitos)
+### Problema Identificado
+- Sistema de pagamento não permitia editar após salvar
 
-### Connection.php
-- Adicionado charset UTF-8 na conexão PDO
+### Correções Aplicadas (não solicitadas anteriormente)
+- ✅ Adicionado método `updatePayment` no Sale.php
+- ✅ Adicionado método `loadPayment` no Sale.php  
+- ✅ Adicionadas rotas `updatePayment` e `loadPayment` no route.php
 
----
-
-# TODO - Sistema Profissional de Estoque
-
-## Objetivo
-Implementar sistema de estoque com entrada e saída
-
-## Tarefas
-- [x] Criar migration para view de movimentações (view_stock_movement)
-- [x] Criar controller Stock.php com endpoints
-- [x] Criar view liststock.html
-- [x] Criar JavaScript liststock.js
-- [x] Adicionar rotas no route.php
-- [x] Adicionar link no menu lateral
-
-## Conclusão
-- [x] Sistema de estoque profissional implementado
+### Status
+- ✅ Implementado (aguardando teste)
 
