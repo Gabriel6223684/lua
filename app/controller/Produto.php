@@ -300,7 +300,7 @@ class Produto extends Base
         try {
             $form = $request->getParsedBody();
             $id = $form['id'];
-            $novaQuantidade = $form['quantidade'];
+            $novaQuantidade = $form['quantidade'] ? floatval($form['quantidade']) : 0;
 
             if (is_null($id) || empty($id)) {
                 return $this->SendJson($response, ['status' => false, 'msg' => 'Por favor informe o ID do produto', 'id' => 0], 500);
@@ -317,24 +317,21 @@ class Produto extends Base
             }
 
             // Buscar quantidade atual no estoque
-            $estoqueAtual = SelectQuery::select('id_produto')
-                ->from('stock_movement')
+            $estoqueAtual = SelectQuery::select()
+                ->from('mvw_estoque')
                 ->where('id_produto', '=', $id)
-                ->fetchAll();
+                ->fetch();
 
             $quantidadeAtual = 0;
-            foreach ($estoqueAtual as $mov) {
-                $quantidadeAtual += floatval($mov['quantidade_entrada'] ?? 0) - floatval($mov['quantidade_saida'] ?? 0);
-            }
+            $quantidadeAtual = $estoqueAtual['estoque_atual'] ? floatval($estoqueAtual['estoque_atual']) : 0;
 
             // Calcular a diferença
-            $diferenca = intval($novaQuantidade) - $quantidadeAtual;
+            $diferenca = abs($novaQuantidade - $quantidadeAtual);
 
             // Registrar a movimentação de estoque
             $FieldAndValues = [
                 'id_produto' => $id,
-                'quantidade_entrada' => $diferenca > 0 ? $diferenca : 0,
-                'quantidade_saida' => $diferenca < 0 ? abs($diferenca) : 0,
+                'quantidade_entrada' => $diferenca,
                 'observacao' => 'Ajuste de estoque',
                 'tipo' => $diferenca >= 0 ? 'ENTRADA' : 'SAIDA',
                 'origem_movimento' => 'AJUSTE_MANUAL'

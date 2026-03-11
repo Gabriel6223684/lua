@@ -695,6 +695,43 @@ class Sale extends Base
                 ], 404);
             }
             
+            // Verificar estoque suficiente para cada item da venda
+            $itens = SelectQuery::select('id_produto', 'quantidade', 'nome')
+                ->from('item_sale')
+                ->where('id_venda', '=', $id)
+                ->fetchAll();
+
+            if (empty($itens)) {
+                return $this->SendJson($response, [
+                    'status' => false,
+                    'msg' => 'Restrição: A venda não possui itens!',
+                    'id' => 0
+                ], 403);
+            }
+
+            // Verificar se há estoque suficiente para cada produto
+            foreach ($itens as $item) {
+                $id_produto = $item['id_produto'];
+                $quantidade_venda = intval($item['quantidade']);
+                $nome_produto = $item['nome'] ?? 'Produto #' . $id_produto;
+
+                // Buscar estoque atual do produto
+                $produto = SelectQuery::select('estoque')
+                    ->from('view_product')
+                    ->where('id', '=', $id_produto)
+                    ->fetch();
+
+                $estoque_atual = intval($produto['estoque'] ?? 0);
+
+                if ($estoque_atual < $quantidade_venda) {
+                    return $this->SendJson($response, [
+                        'status' => false,
+                        'msg' => "Restrição: Estoque insuficiente para o produto '{$nome_produto}'! Estoque atual: {$estoque_atual}, Quantidade solicitada: {$quantidade_venda}",
+                        'id' => 0
+                    ], 403);
+                }
+            }
+            
             // Atualizar a venda com os dados do pagamento
             $FieldAndValues = [
                 'forma_pagamento' => $formaPagamento,
