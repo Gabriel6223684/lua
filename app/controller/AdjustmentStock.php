@@ -36,16 +36,15 @@ class AdjustmentStock extends Base
     }
     public function listajusteestoque($request, $response)
     {
-        #Captura todas a variaveis de forma mais segura VARIAVEIS POST.
-        $form = $request->getParsedBody();
-        #Qual a coluna da tabela deve ser ordenada.
-        $order = $form['order'][0]['column'];
-        #Tipo de ordenação
-        $orderType = $form['order'][0]['dir'];
-        #Em qual registro se inicia o retorno dos registros, OFFSET
-        $start = $form['start'];
-        #Limite de registro a serem retornados do banco de dados LIMIT
-        $length = $form['length'];
+        $form = $request->getParsedBody() ?? [];
+
+        $draw = intval($form['draw'] ?? 1);
+        $start = intval($form['start'] ?? 0);
+        $length = intval($form['length'] ?? 10);
+
+        $order = $form['order'][0]['column'] ?? 0;
+        $orderType = $form['order'][0]['dir'] ?? 'asc';
+
         $fields = [
             0 => 'id',
             1 => 'nome',
@@ -53,87 +52,57 @@ class AdjustmentStock extends Base
             3 => 'codigo_barra',
             4 => 'valor',
         ];
-        #Capturamos o nome do campo a ser odernado.
-        $orderField = $fields[$order];
-        #O termo pesquisado
-        $term = $form['search']['value'];
-        
-        // Primeiro, conta o total de registros (sem filtros)
-        $totalQuery = SelectQuery::select('id')->from('view_product');
-        $recordsTotal = $totalQuery->count();
-        
-        // Query com filtros para dados
-        $query = SelectQuery::select()->from('view_product');
-        if (!is_null($term) && ($term !== '')) {
+
+        $orderField = $fields[$order] ?? 'id';
+
+        $term = $form['search']['value'] ?? '';
+
+        $recordsTotal = SelectQuery::select('id')
+            ->from('view_product')
+            ->count();
+
+        $query = SelectQuery::select()
+            ->from('view_product');
+
+        if (!empty($term)) {
             $query
                 ->where('id', 'ilike', "%{$term}%")
                 ->where('nome', 'ilike', "%{$term}%", 'or')
                 ->where('descricao_curta', 'ilike', "%{$term}%", 'or')
                 ->where('codigo_barra', 'ilike', "%{$term}%", 'or')
-                ->where('valor', 'ilike', "%{$term}%", 'or');        
+                ->where('valor', 'ilike', "%{$term}%", 'or');
         }
-        
-        // Conta registros filtrados
+
         $filteredQuery = clone $query;
         $recordsFiltered = $filteredQuery->count();
-        
-        // Busca os dados paginados
+
         $product = $query
             ->order($orderField, $orderType)
             ->limit($length, $start)
             ->fetchAll();
-            
+
         $produtoData = [];
+
         foreach ($product as $key => $value) {
+
             $produtoData[$key] = [
                 $value['id'],
                 $value['nome'],
                 $value['descricao_curta'],
                 $value['codigo_barra'],
                 $value['valor'],
-                "<div class='d-flex gap-2'>
-                    <button type='button' class='btn btn-primary btn-sm px-2 shadow-sm' style='white-space: nowrap; font-weight: 500;' data-bs-toggle='modal' data-bs-target='#modalstock{$value['id']}'>
-                        <i class='bi bi-plus-circle'></i> Ajustar
-                    </button>
-                    <button type='button' onclick='Delete({$value['id']});' class='btn btn-danger btn-sm px-2 shadow-sm' style='white-space: nowrap; font-weight: 500;'>
-                        <i class='bi bi-trash-fill'></i> Excluir
-                    </button>
-                </div>
-                <div class='modal fade' id='modalstock{$value['id']}' tabindex='-1' aria-labelledby='exampleModalLabel' aria-hidden='true'>
-                    <div class='modal-dialog'>
-                        <div class='modal-content'>
-                            <div class='modal-header'>
-                                <h1 class='modal-title fs-5' id='exampleModalLabel'>Ajuste Estoque - {$value['nome']}</h1>
-                                <button type='button' class='btn-close' data-bs-dismiss='modal' aria-label='Close'></button>
-                            </div>
-                            <div class='modal-body'>
-                                <div class='form-floating mb-3'>
-                                    <input type='text' class='form-control' id='quantidade_ajuste_{$value['id']}' placeholder='Quantidade' autofocus>
-                                    <label for='quantidade_ajuste_{$value['id']}'>Nova Quantidade</label>
-                                </div>
-                                <div class='form-floating mb-3'>
-                                    <input type='text' class='form-control' id='quantidade_atual_{$value['id']}' placeholder='Quantidade Atual' value='{$value['estoque']}' disabled>
-                                    <label for='quantidade_atual_{$value['id']}'>Quantidade Atual</label>
-                                </div>
-                                <div class='form-floating mb-3'>
-                                    <button onclick='ajustarEstoque({$value['id']});' type='button' class='btn btn-warning'>Alterar</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>"
+                "<button onclick='ajustarEstoque({$value['id']});' class='btn btn-primary'>Ajustar</button>"
             ];
         }
 
         $data = [
-            'status' => true,
-            'recordsTotal' => $recordsTotal,
-            'recordsFiltered' => $recordsFiltered,
-            'data' => $produtoData
+            "draw" => $draw,
+            "recordsTotal" => $recordsTotal,
+            "recordsFiltered" => $recordsFiltered,
+            "data" => $produtoData
         ];
-        
-        $payload = json_encode($data);
-        $response->getBody()->write($payload);
+
+        $response->getBody()->write(json_encode($data));
 
         return $response
             ->withHeader('Content-Type', 'application/json')
@@ -199,7 +168,6 @@ class AdjustmentStock extends Base
                 'msg' => 'Estoque atualizado com sucesso!',
                 'id' => $id_produto
             ], 200);
-
         } catch (\Exception $e) {
             return $this->SendJson($response, [
                 'status' => false,
@@ -227,7 +195,6 @@ class AdjustmentStock extends Base
                 ->render($response, $this->setView('reports/reportproduto'), $dadosTemplate)
                 ->withHeader('Content-Type', 'text/html')
                 ->withStatus(200);
-
         } catch (\Exception $e) {
             $response->getBody()->write("Erro ao gerar relatório: " . $e->getMessage());
             return $response->withStatus(500);
@@ -279,7 +246,6 @@ class AdjustmentStock extends Base
                 'msg' => 'Produto excluído com sucesso!',
                 'id' => $id
             ], 200);
-
         } catch (\Exception $e) {
             return $this->SendJson($response, [
                 'status' => false,

@@ -16,7 +16,7 @@ class DataTables {
         processing: true,
         serverSide: true,
         language: {
-            url: 'https://cdn.datatables.net/plug-ins/1.11.5/i18n/pt-BR.json',
+        url: 'https://cdn.datatables.net/plug-ins/2.3.7/i18n/pt-BR.json',
             searchPlaceholder: 'Digite sua pesquisa...'
         },
         ajax: {

@@ -58,16 +58,15 @@ class User extends Base
     }
     public function listuser($request, $response)
     {
-        #Captura todas a variaveis de forma mais segura VARIAVEIS POST.
-        $form = $request->getParsedBody();
-        #Qual a coluna da tabela deve ser ordenada.
-        $order = $form['order'][0]['column'];
-        #Tipo de ordenação
-        $orderType = $form['order'][0]['dir'];
-        #Em qual registro se inicia o retorno dos registros, OFFSET
-        $start = $form['start'];
-        #Limite de registro a serem retornados do banco de dados LIMIT
-        $length = $form['length'];
+        $form = $request->getParsedBody() ?? [];
+
+        $draw = intval($form['draw'] ?? 1);
+        $start = intval($form['start'] ?? 0);
+        $length = intval($form['length'] ?? 10);
+
+        $order = $form['order'][0]['column'] ?? 0;
+        $orderType = $form['order'][0]['dir'] ?? 'asc';
+
         $fields = [
             0 => 'id',
             1 => 'nome',
@@ -75,59 +74,62 @@ class User extends Base
             3 => 'cpf',
             4 => 'rg'
         ];
-        #Capturamos o nome do campo a ser odernado.
-        $orderField = $fields[$order];
-        #O termo pesquisado
-        $term = $form['search']['value'];
-        
-        // Primeiro, conta o total de registros (sem filtros)
-        $totalQuery = SelectQuery::select('id')->from('users');
-        $recordsTotal = $totalQuery->count();
-        
-        // Query com filtros para dados
-        $query = SelectQuery::select('id,nome,sobrenome,cpf,rg,senha')->from('users');
-        if (!is_null($term) && ($term !== '')) {
-            $query->where('nome', 'ilike', "%{$term}%", 'or')
+
+        $orderField = $fields[$order] ?? 'id';
+
+        $term = $form['search']['value'] ?? '';
+
+        $recordsTotal = SelectQuery::select('id')
+            ->from('users')
+            ->count();
+
+        $query = SelectQuery::select('id,nome,sobrenome,cpf,rg')
+            ->from('users');
+
+        if (!empty($term)) {
+            $query
+                ->where('nome', 'ilike', "%{$term}%")
                 ->where('sobrenome', 'ilike', "%{$term}%", 'or')
                 ->where('rg', 'ilike', "%{$term}%", 'or')
-                ->where('cpf', 'ilike', "%{$term}%");
+                ->where('cpf', 'ilike', "%{$term}%", 'or');
         }
-        
-        // Conta registros filtrados
+
         $filteredQuery = clone $query;
         $recordsFiltered = $filteredQuery->count();
-        
-        // Busca os dados paginados
+
         $users = $query
             ->order($orderField, $orderType)
             ->limit($length, $start)
             ->fetchAll();
-            
+
         $userData = [];
+
         foreach ($users as $key => $value) {
+
             $userData[$key] = [
                 $value['id'],
                 $value['nome'],
                 $value['sobrenome'],
                 $value['rg'],
                 $value['cpf'],
-                "<a href=\"/usuario/alterar/" . $value['id'] . "\" class=\"btn btn-warning\"><i class=\"fa-solid fa-pen-to-square\"></i>Alterar</a>
+                "<a href='/usuario/alterar/{$value['id']}' class='btn btn-warning'>
+                <i class='fa-solid fa-pen-to-square'></i> Alterar
+            </a>
 
-                <button type='button'  onclick='Delete(" . $value['id'] . ");' class='btn btn-danger'>
-                <i class=\"bi bi-trash-fill\"></i>
-                Excluir
-                </button>"
+            <button onclick='Delete({$value['id']});' class='btn btn-danger'>
+                <i class='bi bi-trash-fill'></i> Excluir
+            </button>"
             ];
         }
-        $data = [
-            'status' => true,
-            'recordsTotal' => $recordsTotal,
-            'recordsFiltered' => $recordsFiltered,
-            'data' => $userData
-        ];
-        $payload = json_encode($data);
 
-        $response->getBody()->write($payload);
+        $data = [
+            "draw" => $draw,
+            "recordsTotal" => $recordsTotal,
+            "recordsFiltered" => $recordsFiltered,
+            "data" => $userData
+        ];
+
+        $response->getBody()->write(json_encode($data));
 
         return $response
             ->withHeader('Content-Type', 'application/json')
@@ -194,36 +196,35 @@ class User extends Base
             return $this->SendJson($response, ['status' => false, 'msg' => 'Restrição: ' . $e->getMessage(), 'id' => 0], 500);
         }
     }
-   public function print($request, $response)
-{
-    try {
-        // 1. Busca os dados na tabela de usuários
-        // Ajuste os nomes das colunas (ex: nome, cpf, celular) conforme seu banco
-        $usuarios = SelectQuery::select('id, nome, sobrenome, cpf, rg')
-            ->from('users') 
-            ->order('nome', 'ASC')
-            ->order('sobrenome', 'ASC')
-            ->order('cpf', 'ASC')
-            ->order('rg', 'ASC')
-            ->fetchAll();
+    public function print($request, $response)
+    {
+        try {
+            // 1. Busca os dados na tabela de usuários
+            // Ajuste os nomes das colunas (ex: nome, cpf, celular) conforme seu banco
+            $usuarios = SelectQuery::select('id, nome, sobrenome, cpf, rg')
+                ->from('users')
+                ->order('nome', 'ASC')
+                ->order('sobrenome', 'ASC')
+                ->order('cpf', 'ASC')
+                ->order('rg', 'ASC')
+                ->fetchAll();
 
-        // 2. Monta o array de dados para o template
-        $dadosTemplate = [
-            'titulo'   => 'Relatório de Usuários',
-            'usuarios' => $usuarios,
-            'total'    => count($usuarios)
-        ];
+            // 2. Monta o array de dados para o template
+            $dadosTemplate = [
+                'titulo'   => 'Relatório de Usuários',
+                'usuarios' => $usuarios,
+                'total'    => count($usuarios)
+            ];
 
-        // 3. Renderiza o template específico de usuários
-        // Certifique-se de que o arquivo se chama 'reportuser.html' na pasta reports
-        return $this->getTwig()
-            ->render($response, $this->setView('reports/reportuser'), $dadosTemplate)
-            ->withHeader('Content-Type', 'text/html')
-            ->withStatus(200);
-
-    } catch (\Exception $e) {
-        $response->getBody()->write("Erro ao gerar relatório: " . $e->getMessage());
-        return $response->withStatus(500);
+            // 3. Renderiza o template específico de usuários
+            // Certifique-se de que o arquivo se chama 'reportuser.html' na pasta reports
+            return $this->getTwig()
+                ->render($response, $this->setView('reports/reportuser'), $dadosTemplate)
+                ->withHeader('Content-Type', 'text/html')
+                ->withStatus(200);
+        } catch (\Exception $e) {
+            $response->getBody()->write("Erro ao gerar relatório: " . $e->getMessage());
+            return $response->withStatus(500);
+        }
     }
-}
 }

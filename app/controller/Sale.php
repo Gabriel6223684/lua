@@ -262,7 +262,7 @@ class Sale extends Base
             ->where('id_venda', '=', $id)
             ->fetch();
 
-        $items = SelectQuery::select('id,nome,quantidade,total_liquido,total_bruto')
+        $items = SelectQuery::select('id,id_produto,nome,quantidade,total_liquido,total_bruto')
             ->from('item_sale')
             ->where('id_venda', '=', $id)
             ->fetchAll();
@@ -289,6 +289,10 @@ class Sale extends Base
         try {
             #Captura todas a variaveis de forma mais segura VARIAVEIS POST.
             $form = $request->getParsedBody();
+            
+            # DataTables required parameter
+            $draw = isset($form['draw']) ? intval($form['draw']) : 1;
+            
             #Qual a coluna da tabela deve ser ordenada.
             $order = $form['order'][0]['column'] ?? 0;
             #Tipo de ordenação
@@ -305,7 +309,7 @@ class Sale extends Base
                 3 => 'desconto',
                 4 => 'total_liquido',
                 5 => 'observacao',
-                6 => 'created_at',
+                6 => 'data_cadastro',
             ];
             #Capturamos o nome do campo a ser ordenado.
             $orderField = $fields[$order] ?? 'id';
@@ -324,7 +328,7 @@ class Sale extends Base
             $totalRecords = $countQuery->count();
             
             # Query com paginação
-            $query = SelectQuery::select('id, id_cliente, total_bruto, desconto, total_liquido, observacao, created_at')
+            $query = SelectQuery::select('id, id_cliente, total_bruto, desconto, total_liquido, observacao, data_cadastro')
                 ->from('sale');
                 
             if (!is_null($term) && ($term !== '')) {
@@ -350,7 +354,7 @@ class Sale extends Base
                     ->fetch();
                 
                 $nomeCliente = $customer ? $customer['nome_fantasia'] : 'Consumidor Final';
-                $dataFormatada = date('d/m/Y H:i', strtotime($value['created_at']));
+                $dataFormatada = date('d/m/Y H:i', strtotime($value['data_cadastro']));
                 
                 $salesData[$key] = [
                     $value['id'],
@@ -371,8 +375,9 @@ class Sale extends Base
                 ];
             }
             
+            # DataTables expected format
             $data = [
-                'status' => true,
+                'draw' => $draw,
                 'recordsTotal' => $totalRecords,
                 'recordsFiltered' => $totalRecords,
                 'data' => $salesData
@@ -385,10 +390,18 @@ class Sale extends Base
                 ->withStatus(200);
                 
         } catch (\Exception $e) {
-            return $this->SendJson($response, [
-                'status' => false,
-                'msg' => 'Erro ao listar vendas: ' . $e->getMessage()
-            ], 500);
+            $data = [
+                'draw' => isset($form['draw']) ? intval($form['draw']) : 1,
+                'recordsTotal' => 0,
+                'recordsFiltered' => 0,
+                'data' => [],
+                'error' => 'Erro ao listar vendas: ' . $e->getMessage()
+            ];
+            $payload = json_encode($data);
+            $response->getBody()->write($payload);
+            return $response
+                ->withHeader('Content-Type', 'application/json')
+                ->withStatus(200);
         }
     }
 
@@ -586,7 +599,7 @@ class Sale extends Base
     public function print($request, $response)
     {
         try {
-            $sales = SelectQuery::select('id, id_cliente, total_bruto, desconto, total_liquido, observacao, created_at')
+            $sales = SelectQuery::select('id, id_cliente, total_bruto, desconto, total_liquido, observacao, data_cadastro')
                 ->from('sale')
                 ->order('id', 'DESC')
                 ->fetchAll();
@@ -606,7 +619,7 @@ class Sale extends Base
                     'desconto' => $sale['desconto'],
                     'total_liquido' => $sale['total_liquido'],
                     'observacao' => $sale['observacao'] ?? '-',
-                    'data' => date('d/m/Y H:i', strtotime($sale['created_at']))
+                    'data' => date('d/m/Y H:i', strtotime($sale['data_cadastro']))
                 ];
             }
 
@@ -624,6 +637,155 @@ class Sale extends Base
         } catch (\Exception $e) {
             $response->getBody()->write("Erro ao gerar relatório: " . $e->getMessage());
             return $response->withStatus(500);
+        }
+    }
+
+    public function finalizar($request, $response)
+    {
+        try {
+            $form = $request->getParsedBody();
+            $id = $form['id'] ?? null;
+            $paymentData = isset($form['paymentData']) ? json_decode($form['paymentData'], true) : null;
+            
+            if (empty($id) || is_null($id)) {
+                return $this->SendJson($response, [
+                    'status' => false,
+                    'msg' => 'Restrição: O ID da venda é obrigatório!',
+                    'id' => 0
+                ], 403);
+            }
+            
+            if (!$paymentData) {
+                return $this->SendJson($response, [
+                    'status' => false,
+                    'msg' => 'Restrição: Dados do pagamento são obrigatórios!',
+                    'id' => 0
+                ], 403);
+            }
+            
+            // Validar forma de pagamento
+            $formaPagamento = $paymentData['formaPagamento'] ?? '';
+            if (empty($formaPagamento)) {
+                return $this->SendJson($response, [
+                    'status' => false,
+                    'msg' => 'Restrição: Forma de pagamento é obrigatória!',
+                    'id' => 0
+                ], 403);
+            }
+            
+            // Validar valor pago conforme forma de pagamento
+            $valorTotal = floatval($paymentData['valorTotal'] ?? 0);
+            $valorPago = floatval($paymentData['valorPago'] ?? 0);
+            
+            if ($formaPagamento === 'DINHEIRO' && $valorPago < $valorTotal) {
+                return $this->SendJson($response, [
+                    'status' => false,
+                    'msg' => 'Restrição: Valor pago é menor que o total da venda!',
+                    'id' => 0
+                ], 403);
+            }
+            
+            // Buscar a venda para verificar se existe
+            $sale = SelectQuery::select()->from('sale')->where('id', '=', $id)->fetch();
+            if (!$sale) {
+                return $this->SendJson($response, [
+                    'status' => false,
+                    'msg' => 'Restrição: Venda não encontrada!',
+                    'id' => 0
+                ], 404);
+            }
+            
+            // Atualizar a venda com os dados do pagamento
+            $FieldAndValues = [
+                'forma_pagamento' => $formaPagamento,
+                'status' => 'FINALIZADA'
+            ];
+            
+            // Adicionar observação do pagamento
+            $obsPagamento = '';
+            switch ($formaPagamento) {
+                case 'PIX':
+                    $obsPagamento = 'PIX - Chave: ' . ($paymentData['pixKey'] ?? 'N/A');
+                    break;
+                case 'CARTAO_CREDITO':
+                    $obsPagamento = 'Cartão Crédito - ' . ($paymentData['parcelas'] ?? 1) . 'x';
+                    break;
+                case 'CARTAO_DEBITO':
+                    $obsPagamento = 'Cartão Débito';
+                    break;
+                case 'DINHEIRO':
+                    $troco = $valorPago - $valorTotal;
+                    $obsPagamento = 'Dinheiro - Pago: R$ ' . number_format($valorPago, 2, ',', '.') . ' - Troco: R$ ' . number_format($troco, 2, ',', '.');
+                    break;
+                case 'BOLETO':
+                    $obsPagamento = 'Boleto';
+                    break;
+            }
+            
+            $FieldAndValues['observacao'] = ($sale['observacao'] ?? '') . ' | Pagamento: ' . $obsPagamento;
+            
+            $isUpdated = UpdateQuery::table('sale')->set($FieldAndValues)->where('id', '=', $id)->update();
+            
+            if (!$isUpdated) {
+                return $this->SendJson($response, [
+                    'status' => false,
+                    'msg' => 'Restrição: Erro ao finalizar venda!',
+                    'id' => 0
+                ], 500);
+            }
+            
+            // Registrar saída de estoque para cada item da venda
+            $this->registrarSaidaEstoque($id);
+            
+            return $this->SendJson($response, [
+                'status' => true,
+                'msg' => 'Venda finalizada com sucesso!',
+                'id' => $id,
+                'pagamento' => $paymentData
+            ]);
+            
+        } catch (\Exception $e) {
+            return $this->SendJson($response, [
+                'status' => false,
+                'msg' => 'Erro ao finalizar venda: ' . $e->getMessage(),
+                'id' => 0
+            ], 500);
+        }
+    }
+
+    /**
+     * Registra a saída de estoque para cada item da venda
+     */
+    private function registrarSaidaEstoque($id_venda)
+    {
+        try {
+            // Buscar todos os itens da venda
+            $itens = SelectQuery::select('id_produto', 'quantidade')
+                ->from('item_sale')
+                ->where('id_venda', '=', $id_venda)
+                ->fetchAll();
+
+            foreach ($itens as $item) {
+                $id_produto = $item['id_produto'];
+                $quantidade = intval($item['quantidade']);
+
+                if ($id_produto && $quantidade > 0) {
+                    // Registrar movimento de saída no estoque
+                    InsertQuery::table('stock_movement')->save([
+                        'id_produto' => $id_produto,
+                        'quantidade_entrada' => 0,
+                        'quantidade_saida' => $quantidade,
+                        'observacao' => 'Venda #' . $id_venda,
+                        'tipo' => 'SAIDA',
+                        'origem_movimento' => 'VENDA'
+                    ]);
+                }
+            }
+
+            return true;
+        } catch (\Exception $e) {
+            error_log('Erro ao registrar saída de estoque: ' . $e->getMessage());
+            return false;
         }
     }
 }

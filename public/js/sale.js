@@ -188,6 +188,7 @@ async function listItemSale() {
         },
       );
       let quantidade = item?.quantidade || 1;
+      let idProduto = item?.id_produto || item?.id || 0;
       trs += `
                 <tr>
                     <td>${item.id}</td>
@@ -201,9 +202,14 @@ async function listItemSale() {
                     </td>
                     <td>${valorItem}</td>
                     <td>
-                        <button class="btn btn-danger btn-sm" onclick="DeleteItem(${item.id})">
-                            <i class="bi bi-trash-fill"></i> Excluir
-                        </button>
+                        <div class="d-flex gap-1">
+                            <button class="btn btn-success btn-sm" onclick="addSameProduct(${idProduto})" title="Adicionar mais">
+                                <i class="bi bi-cart-plus-fill"></i>
+                            </button>
+                            <button class="btn btn-danger btn-sm" onclick="DeleteItem(${item.id})" title="Excluir">
+                                <i class="bi bi-trash-fill"></i>
+                            </button>
+                        </div>
                     </td>
                 </tr>
            `;
@@ -570,6 +576,58 @@ async function selectProduct(productId) {
 // Função global para selecionar produto
 window.selectProduct = selectProduct;
 
+// Função para adicionar o mesmo produto ao carrinho
+async function addSameProduct(productId) {
+  if (!productId || productId === 0) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'Atenção',
+      text: 'Produto não encontrado!',
+      timer: 2000,
+      progressBar: true
+    });
+    return;
+  }
+  
+  // Verificar se existe uma venda criada
+  if (!Id.value || Id.value === '') {
+    await InsertSale();
+  }
+  
+  // Definir o produto no campo de pesquisa
+  const pesquisaSelect = document.getElementById('pesquisa');
+  if (pesquisaSelect) {
+    // Remover opções anteriores criadas dinamicamente
+    const existingOptions = pesquisaSelect.querySelectorAll('option[data-dynamic]');
+    existingOptions.forEach(opt => opt.remove());
+    
+    // Criar uma opção para o produto selecionado
+    const option = document.createElement('option');
+    option.value = productId;
+    option.textContent = `Produto ${productId}`;
+    option.setAttribute('data-dynamic', 'true');
+    pesquisaSelect.appendChild(option);
+    pesquisaSelect.value = productId;
+  }
+  
+  // Inserir o item na venda
+  await InsertItemSale();
+  
+  // Atualizar a lista de itens
+  await listItemSale();
+  
+  Swal.fire({
+    icon: 'success',
+    title: 'Sucesso',
+    text: 'Produto adicionado à venda!',
+    timer: 1500,
+    progressBar: true
+  });
+}
+
+// Tornar função global
+window.addSameProduct = addSameProduct;
+
 // ==========================================
 // FUNÇÕES DE PAGAMENTO (PIX, Cartão, etc)
 // ==========================================
@@ -848,6 +906,18 @@ async function finalizeSale() {
     return;
   }
   
+  // Verificar se tem itens na venda
+  if (!Id.value || Id.value === '') {
+    Swal.fire({
+      icon: 'warning',
+      title: 'Atenção',
+      text: 'Nenhum item na venda! Adicione produtos primeiro.',
+      timer: 3000,
+      progressBar: true
+    });
+    return;
+  }
+  
   // Coletar dados do pagamento
   const paymentData = {
     formaPagamento: formaPagamento.value,
@@ -870,18 +940,29 @@ async function finalizeSale() {
     paymentData.cardNumber = document.getElementById('cardNumber')?.value || '';
   }
   
-  // Adicionar dados do pagamento ao formulário
-  const form = document.getElementById('form');
-  const paymentDataInput = document.createElement('input');
-  paymentDataInput.type = 'hidden';
-  paymentDataInput.name = 'paymentData';
-  paymentDataInput.value = JSON.stringify(paymentData);
-  form.appendChild(paymentDataInput);
+  // Criar FormData com os dados necessários
+  const formData = new FormData();
+  formData.append('id', Id.value);
+  formData.append('paymentData', JSON.stringify(paymentData));
   
   try {
-    const response = await Requests.SetForm("form").Post("/venda/update");
+    const response = await fetch('/venda/finalizar', {
+      method: 'POST',
+      body: formData
+    });
     
-    if (response.status) {
+    const data = await response.json();
+    
+    if (data.status) {
+      // Fechar o modal de pagamento
+      const pagamentoModal = document.getElementById('pagamentoVenda');
+      if (pagamentoModal) {
+        const modal = bootstrap.Modal.getInstance(pagamentoModal);
+        if (modal) {
+          modal.hide();
+        }
+      }
+      
       Swal.fire({
         icon: 'success',
         title: 'Venda Finalizada!',
@@ -896,7 +977,7 @@ async function finalizeSale() {
       Swal.fire({
         icon: 'error',
         title: 'Erro',
-        text: response.msg || 'Não foi possível finalizar a venda.',
+        text: data.msg || 'Não foi possível finalizar a venda.',
         timer: 3000,
         progressBar: true
       });
@@ -909,11 +990,6 @@ async function finalizeSale() {
       timer: 3000,
       progressBar: true
     });
-  }
-  
-  // Remover input temporário
-  if (paymentDataInput) {
-    form.removeChild(paymentDataInput);
   }
 }
 

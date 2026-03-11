@@ -98,83 +98,90 @@ class Cliente extends Base
     }
     public function listcliente($request, $response)
     {
-        #Captura todas a variaveis de forma mais segura VARIAVEIS POST.
-        $form = $request->getParsedBody();
-        #Qual a coluna da tabela deve ser ordenada.
-        $order = $form['order'][0]['column'];
-        #Tipo de ordenação
-        $orderType = $form['order'][0]['dir'];
-        #Em qual registro se inicia o retorno dos registros, OFFSET
-        $start = $form['start'];
-        #Limite de registro a serem retornados do banco de dados LIMIT
-        $length = $form['length'];
-        $fields = [
-            0 => 'id',
-            1 => 'nome_fantasia',
-            2 => 'sobrenome_razao',
-            3 => 'cpf_cnpj',
-            4 => 'rg_ie',
-            5 => 'ativo',
-        ];
-        #Capturamos o nome do campo a ser odernado.
-        $orderField = $fields[$order];
-        #O termo pesquisado
-        $term = $form['search']['value'];
-        
-        // Primeiro, conta o total de registros (sem filtros)
-        $totalQuery = SelectQuery::select('id')->from('customer');
-        $recordsTotal = $totalQuery->count();
-        
-        // Query com filtros para dados
-        $query = SelectQuery::select('id,nome_fantasia,sobrenome_razao,cpf_cnpj,rg_ie,ativo')->from('customer');
-        if (!is_null($term) && ($term !== '')) {
-            $query->where('nome_fantasia', 'ilike', "%{$term}%", 'or')
-                ->where('sobrenome_razao', 'ilike', "%{$term}%", 'or')
-                ->where('cpf_cnpj', 'ilike', "%{$term}%", 'or')
-                ->where('rg_ie', 'ilike', "%{$term}%", 'or')
-                ->where('ativo', 'ilike', "%{$term}%");
-        }
-        
-        // Conta registros filtrados
-        $filteredQuery = clone $query;
-        $recordsFiltered = $filteredQuery->count();
-        
-        // Busca os dados paginados
-        $customers = $query
-            ->order($orderField, $orderType)
-            ->limit($length, $start)
-            ->fetchAll();
-            
-        $customersData = [];
-        foreach ($customers as $key => $value) {
-            $customersData[$key] = [
-                $value['id'],
-                $value['nome_fantasia'],
-                $value['sobrenome_razao'],
-                $value['cpf_cnpj'],
-                $value['rg_ie'],
-                $value['ativo'] ? 'Sim' : 'Não',
-                "<a href=\"/cliente/alterar/" . $value['id'] . "\" class=\"btn btn-warning\"><i class=\"fa-solid fa-pen-to-square\"></i>Alterar</a>
+        try {
 
-                <button type='button'  onclick='Delete(" . $value['id'] . ");' class='btn btn-danger'>
-                 <i class=\"bi bi-trash-fill\"></i>
-                 Excluir
-                 </button>"
+            $form = $request->getParsedBody() ?? [];
+
+            $draw = intval($form['draw'] ?? 1);
+            $start = intval($form['start'] ?? 0);
+            $length = intval($form['length'] ?? 10);
+
+            $order = $form['order'][0]['column'] ?? 0;
+            $orderType = $form['order'][0]['dir'] ?? 'asc';
+
+            $fields = [
+                0 => 'id',
+                1 => 'nome_fantasia',
+                2 => 'sobrenome_razao',
+                3 => 'cpf_cnpj',
+                4 => 'rg_ie',
+                5 => 'ativo',
             ];
+
+            $orderField = $fields[$order] ?? 'id';
+
+            $term = $form['search']['value'] ?? '';
+
+            $recordsTotal = SelectQuery::select('COUNT(id) as total')
+                ->from('customer')
+                ->fetch()['total'];
+
+            $query = SelectQuery::select('id,nome_fantasia,sobrenome_razao,cpf_cnpj,rg_ie,ativo')
+                ->from('customer');
+
+            if (!empty($term)) {
+                $query
+                    ->where('nome_fantasia', 'like', "%{$term}%")
+                    ->where('sobrenome_razao', 'like', "%{$term}%", 'or')
+                    ->where('cpf_cnpj', 'like', "%{$term}%", 'or')
+                    ->where('rg_ie', 'like', "%{$term}%", 'or');
+            }
+
+            $customers = $query
+                ->order($orderField, $orderType)
+                ->limit($length, $start)
+                ->fetchAll() ?? [];
+
+            $recordsFiltered = count($customers);
+
+            $customersData = [];
+
+            foreach ($customers as $value) {
+
+                $customersData[] = [
+                    $value['id'],
+                    $value['nome_fantasia'],
+                    $value['sobrenome_razao'],
+                    $value['cpf_cnpj'],
+                    $value['rg_ie'],
+                    $value['ativo'] ? 'Sim' : 'Não',
+                    "<a href='/cliente/alterar/{$value['id']}' class='btn btn-warning'>
+                Alterar
+                </a>
+                <button onclick='Delete({$value['id']})' class='btn btn-danger'>
+                Excluir
+                </button>"
+                ];
+            }
+
+            $data = [
+                "draw" => $draw,
+                "recordsTotal" => intval($recordsTotal),
+                "recordsFiltered" => intval($recordsTotal),
+                "data" => $customersData
+            ];
+
+            $response->getBody()->write(json_encode($data));
+
+            return $response->withHeader('Content-Type', 'application/json');
+        } catch (\Throwable $e) {
+
+            $response->getBody()->write(json_encode([
+                "error" => $e->getMessage()
+            ]));
+
+            return $response->withHeader('Content-Type', 'application/json');
         }
-        $data = [
-            'status' => true,
-            'recordsTotal' => $recordsTotal,
-            'recordsFiltered' => $recordsFiltered,
-            'data' => $customersData
-        ];
-        $payload = json_encode($data);
-
-        $response->getBody()->write($payload);
-
-        return $response
-            ->withHeader('Content-Type', 'application/json')
-            ->withStatus(200);
     }
     public function update($request, $response)
     {
@@ -201,34 +208,33 @@ class Cliente extends Base
         }
     }
     public function print($request, $response)
-{
-    try {
-        // Busca todos os clientes usando sua SelectQuery
-        // Selecionei as colunas baseadas no que o seu HTML original pedia
-        $customers = SelectQuery::select('id, nome_fantasia, sobrenome_razao, cpf_cnpj, rg_ie')
-            ->from('customer')
-            ->order('nome_fantasia', 'ASC')
-            ->order('sobrenome_razao', 'ASC')
-            ->order('cpf_cnpj', 'ASC')
-            ->order('rg_ie', 'ASC')
-            ->fetchAll();
+    {
+        try {
+            // Busca todos os clientes usando sua SelectQuery
+            // Selecionei as colunas baseadas no que o seu HTML original pedia
+            $customers = SelectQuery::select('id, nome_fantasia, sobrenome_razao, cpf_cnpj, rg_ie')
+                ->from('customer')
+                ->order('nome_fantasia', 'ASC')
+                ->order('sobrenome_razao', 'ASC')
+                ->order('cpf_cnpj', 'ASC')
+                ->order('rg_ie', 'ASC')
+                ->fetchAll();
 
-        $dadosTemplate = [
-            'titulo'   => 'Relatório de Clientes',
-            'clientes' => $customers,
-            'total'    => count($customers)
-        ];
+            $dadosTemplate = [
+                'titulo'   => 'Relatório de Clientes',
+                'clientes' => $customers,
+                'total'    => count($customers)
+            ];
 
-        // Renderiza o template passando os dados
-        // Nota: Certifique-se que o método render do seu Base aceita esses parâmetros
-        return $this->getTwig()
-    ->render($response, $this->setView('reports/reportcliente'), $dadosTemplate)
-            ->withHeader('Content-Type', 'text/html')
-            ->withStatus(200);
-
-    } catch (\Exception $e) {
-        $response->getBody()->write("Erro ao gerar relatório: " . $e->getMessage());
-        return $response->withStatus(500);
+            // Renderiza o template passando os dados
+            // Nota: Certifique-se que o método render do seu Base aceita esses parâmetros
+            return $this->getTwig()
+                ->render($response, $this->setView('reports/reportcliente'), $dadosTemplate)
+                ->withHeader('Content-Type', 'text/html')
+                ->withStatus(200);
+        } catch (\Exception $e) {
+            $response->getBody()->write("Erro ao gerar relatório: " . $e->getMessage());
+            return $response->withStatus(500);
+        }
     }
-}
 }

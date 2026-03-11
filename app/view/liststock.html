@@ -1,0 +1,194 @@
+{% extends "main.html" %}
+{% block main %}
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+
+<div class="container-fluid py-4 bg-dark min-vh-100">
+    <div class="row align-items-center mb-4">
+        <div class="col-sm-6">
+            <h3 class="fw-bold text-white mb-0">
+                <i class="bi bi-box-seam me-2" style="color: rgb(68, 4, 252);"></i>Movimentações de Estoque
+            </h3>
+        </div>
+        <div class="col-sm-6">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb float-sm-end bg-dark border border-secondary p-2 px-3 rounded-pill shadow-sm small">
+                    <li class="breadcrumb-item"><a href="/home" class="text-decoration-none text-white-50">Início</a></li>
+                    <li class="breadcrumb-item active text-white" aria-current="page">Movimentações</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="card bg-dark border-secondary shadow-sm mb-4">
+        <div class="card-header bg-dark py-3 border-bottom border-secondary">
+            <h6 class="m-0 fw-bold text-white-50 text-uppercase small" style="letter-spacing: 1px;">
+                <i class="bi bi-funnel me-2"></i>Filtros
+            </h6>
+        </div>
+        <div class="card-body">
+            <form id="formFiltros" class="row g-3">
+                <div class="col-md-3">
+                    <label for="produto" class="form-label text-white-50 small">Produto</label>
+                    <select id="produto" name="produto" class="form-select form-select-sm" style="width: 100%;">
+                        <option value="">Todos os produtos</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="tipo_movimento" class="form-label text-white-50 small">Tipo</label>
+                    <select id="tipo_movimento" name="tipo_movimento" class="form-select form-select-sm">
+                        <option value="">Todos</option>
+                        <option value="ENTRADA">Entrada</option>
+                        <option value="SAIDA">Saída</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="data_inicial" class="form-label text-white-50 small">Data Inicial</label>
+                    <input type="date" id="data_inicial" name="data_inicial" class="form-control form-control-sm">
+                </div>
+                <div class="col-md-2">
+                    <label for="data_final" class="form-label text-white-50 small">Data Final</label>
+                    <input type="date" id="data_final" name="data_final" class="form-control form-control-sm">
+                </div>
+                <div class="col-md-3 d-flex align-items-end gap-2">
+                    <button type="button" id="btnFiltrar" class="btn btn-sm btn-primary">
+                        <i class="bi bi-funnel"></i> Filtrar
+                    </button>
+                    <button type="button" id="btnLimpar" class="btn btn-sm btn-outline-secondary">
+                        <i class="bi bi-x-lg"></i> Limpar
+                    </button>
+                    <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#modalEntrada">
+                        <i class="bi bi-arrow-down-circle"></i> Entrada
+                    </button>
+                    <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#modalSaida">
+                        <i class="bi bi-arrow-up-circle"></i> Saída
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <form id="form">
+        <input type="hidden" id="id" name="id">
+
+        <div class="card bg-dark border-secondary shadow-sm">
+            <div class="card-header bg-dark py-3 border-bottom border-secondary">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h6 class="m-0 fw-bold text-white-50 text-uppercase small" style="letter-spacing: 1px;">
+                        <i class="bi bi-list-ul me-2"></i>Histórico de Movimentações
+                    </h6>
+                    <span class="badge bg-secondary" id="totalRegistros">0 registros</span>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-dark table-hover align-middle mb-0" id="tabela">
+                    <thead class="text-white-50 small">
+                        <tr class="border-secondary">
+                            <th class="py-3">DATA/HORA</th>
+                            <th>PRODUTO</th>
+                            <th>TIPO</th>
+                            <th class="text-center">ENTRADA</th>
+                            <th class="text-center">SAÍDA</th>
+                            <th class="text-center">EST. ANT.</th>
+                            <th class="text-center">EST. ATUAL</th>
+                            <th>ORIGEM</th>
+                            <th>OBSERVAÇÃO</th>
+                        </tr>
+                    </thead>
+                    <tbody class="small text-white-50 border-top-0">
+                        <tr>
+                            <td colspan="9" class="text-center py-5">Nenhum registro encontrado</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Modal Entrada de Estoque -->
+<div class="modal fade" id="modalEntrada" tabindex="-1" aria-labelledby="modalEntradaLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content bg-dark border-secondary">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title text-success" id="modalEntradaLabel">
+                    <i class="bi bi-arrow-down-circle me-2"></i>Entrada de Estoque
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formEntrada">
+                    <div class="mb-3">
+                        <label for="entrada_produto" class="form-label text-white-50">Produto</label>
+                        <select id="entrada_produto" name="entrada_produto" class="form-select" required style="width: 100%;">
+                            <option value="">Selecione um produto</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="entrada_quantidade" class="form-label text-white-50">Quantidade</label>
+                        <input type="number" id="entrada_quantidade" name="entrada_quantidade" class="form-control" min="1" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="entrada_observacao" class="form-label text-white-50">Observação</label>
+                        <textarea id="entrada_observacao" name="entrada_observacao" class="form-control" rows="2" placeholder="Ex: Compra de mercadorias"></textarea>
+                    </div>
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-success">
+                            <i class="bi bi-check-circle me-2"></i>Registrar Entrada
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Saída de Estoque -->
+<div class="modal fade" id="modalSaida" tabindex="-1" aria-labelledby="modalSaidaLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content bg-dark border-secondary">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title text-danger" id="modalSaidaLabel">
+                    <i class="bi bi-arrow-up-circle me-2"></i>Saída de Estoque
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formSaida">
+                    <div class="mb-3">
+                        <label for="saida_produto" class="form-label text-white-50">Produto</label>
+                        <select id="saida_produto" name="saida_produto" class="form-select" required style="width: 100%;">
+                            <option value="">Selecione um produto</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="saida_quantidade" class="form-label text-white-50">Quantidade</label>
+                        <input type="number" id="saida_quantidade" name="saida_quantidade" class="form-control" min="1" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="saida_estoque" class="form-label text-white-50">Estoque Atual</label>
+                        <input type="text" id="saida_estoque" class="form-control" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label for="saida_observacao" class="form-label text-white-50">Observação</label>
+                        <textarea id="saida_observacao" name="saida_observacao" class="form-control" rows="2" placeholder="Ex: Devolução, quebra, etc."></textarea>
+                    </div>
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-danger">
+                            <i class="bi bi-check-circle me-2"></i>Registrar Saída
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block script %}
+{% include "script.html" %}
+<script defer type="module" src="/js/liststock.js"></script>
+{% endblock %}
+

@@ -1,5 +1,5 @@
 import { Requests } from "./Requests.js";
-const tabela = new $('#tabela').DataTable({
+const tabela = $('#tabela').DataTable({
     paging: true,
     lengthChange: true,
     searching: true,
@@ -12,7 +12,7 @@ const tabela = new $('#tabela').DataTable({
     processing: true,
     serverSide: true,
     language: {
-        url: 'https://cdn.datatables.net/plug-ins/1.13.4/i18n/pt-BR.json',
+        url: 'https://cdn.datatables.net/plug-ins/2.3.7/i18n/pt-BR.json',
         searchPlaceholder: 'Digite sua pesquisa...'
     },
     ajax: {
@@ -41,7 +41,7 @@ const tabela = new $('#tabela').DataTable({
                     if (estoque > 10) badgeClass = 'bg-success';
                     else if (estoque > 0) badgeClass = 'bg-warning text-dark';
                     else badgeClass = 'bg-danger';
-                    
+
                     return `<span class="badge ${badgeClass}">${estoque}</span>`;
                 }
                 return data;
@@ -52,7 +52,7 @@ const tabela = new $('#tabela').DataTable({
 
 // --- LÓGICA DE ATALHOS ---
 document.addEventListener('keydown', function (e) {
-    
+
     // F2 - Ir para Cadastro
     if (e.key === 'F2') {
         e.preventDefault();
@@ -87,7 +87,7 @@ function AdjustStock(id, currentStock) {
     document.getElementById('id').value = id;
     document.getElementById('estoqueAtual').value = currentStock;
     document.getElementById('estoqueAtualLabel').textContent = `Estoque Atual: ${currentStock}`;
-    
+
     const modal = new bootstrap.Modal(document.getElementById('modalAdjustStock'));
     modal.show();
 }
@@ -95,7 +95,7 @@ function AdjustStock(id, currentStock) {
 async function SaveStockAdjust() {
     const id = document.getElementById('id').value;
     const newStock = document.getElementById('novaQuantidade').value;
-    
+
     if (!newStock || newStock < 0) {
         Swal.fire({
             title: "Erro!",
@@ -106,19 +106,19 @@ async function SaveStockAdjust() {
         });
         return;
     }
-    
+
     const formData = new FormData();
     formData.append('id', id);
     formData.append('quantidade', newStock);
-    
+
     try {
         const response = await fetch('/produto/adjuststock', {
             method: 'POST',
             body: formData
         });
-        
+
         const result = await response.json();
-        
+
         if (!result.status) {
             Swal.fire({
                 title: "Erro!",
@@ -129,7 +129,7 @@ async function SaveStockAdjust() {
             });
             return;
         }
-        
+
         Swal.fire({
             title: "Sucesso!",
             icon: "success",
@@ -137,10 +137,10 @@ async function SaveStockAdjust() {
             timer: 3000,
             timerProgressBar: true
         });
-        
+
         bootstrap.Modal.getInstance(document.getElementById('modalAdjustStock')).hide();
         tabela.ajax.reload();
-        
+
     } catch (error) {
         Swal.fire({
             title: "Erro!",

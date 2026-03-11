@@ -10,6 +10,7 @@ use app\controller\PaymentTerms;
 use app\controller\AdjustmentStock;
 use app\controller\Produto;
 use app\controller\Sale;
+use app\controller\Stock;
 use Slim\Routing\RouteCollectorProxy;
 
 $app->get('/', Home::class . ':home');
@@ -33,6 +34,7 @@ $app->group('/venda', function (RouteCollectorProxy $group) {
     $group->post('/delete', Sale::class . ':delete');
     $group->post('/deleteitem', Sale::class . ':deleteitem');
     $group->post('/updateitem', Sale::class . ':updateItem');
+    $group->post('/finalizar', Sale::class . ':finalizar');
 });
 
 $app->group('/login', function (RouteCollectorProxy $group) {
@@ -118,4 +120,13 @@ $app->group('/ajusteestoque', function (RouteCollectorProxy $group) {
     $group->post('/listajusteestoque', AdjustmentStock::class . ':listajusteestoque');
     $group->post('/ajustar', AdjustmentStock::class . ':ajustarestoque');
     $group->post('/delete', AdjustmentStock::class . ':delete');
+});
+
+$app->group('/estoque', function (RouteCollectorProxy $group) {
+    $group->get('/lista', Stock::class . ':lista');
+    $group->post('/liststock', Stock::class . ':liststock');
+    $group->post('/listproductsselect', Stock::class . ':listproductsselect');
+    $group->post('/entrada', Stock::class . ':entrada');
+    $group->post('/saida', Stock::class . ':saida');
+    $group->post('/getstock', Stock::class . ':getstock');
 });

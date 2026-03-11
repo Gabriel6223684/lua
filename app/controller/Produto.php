@@ -77,7 +77,7 @@ class Produto extends Base
         #$data['pagination'] = ['more' => true];
         return $this->SendJson($response, $data);
     }
-    
+
     /**
      * Lista todos os produtos para pesquisa no modal (sem paginação)
      * Usado no modal de pesquisa de produto (F4) na tela de vendas
@@ -87,12 +87,12 @@ class Produto extends Base
         try {
             $form = $request->getParsedBody();
             $term = $form['search'] ?? '';
-            
+
             // Busca produtos na view que tem estoque
             $query = SelectQuery::select('id, codigo_barra, nome, descricao_curta, valor, estoque')
                 ->from('view_product')
                 ->order('nome', 'ASC');
-            
+
             // Se houver termo de busca, filtra
             if (!empty($term)) {
                 $query->where('id', 'ilike', "%{$term}%", 'or')
@@ -100,17 +100,16 @@ class Produto extends Base
                     ->where('codigo_barra', 'ilike', "%{$term}%", 'or')
                     ->where('descricao_curta', 'ilike', "%{$term}%");
             }
-            
+
             $produtos = $query->fetchAll();
-            
+
             $data = [
                 'status' => true,
                 'data' => $produtos,
                 'total' => count($produtos)
             ];
-            
+
             return $this->SendJson($response, $data);
-            
         } catch (\Exception $e) {
             return $this->SendJson($response, [
                 'status' => false,
@@ -120,57 +119,59 @@ class Produto extends Base
     }
     public function listproduto($request, $response)
     {
-        #Captura todas a variaveis de forma mais segura VARIAVEIS POST.
-        $form = $request->getParsedBody();
-        #Qual a coluna da tabela deve ser ordenada.
-        $order = $form['order'][0]['column'];
-        #Tipo de ordenação
-        $orderType = $form['order'][0]['dir'];
-        #Em qual registro se inicia o retorno dos registros, OFFSET
-        $start = $form['start'];
-        #Limite de registro a serem retornados do banco de dados LIMIT
-        $length = $form['length'];
+        $form = $request->getParsedBody() ?? [];
+
+        $draw = intval($form['draw'] ?? 1);
+        $start = intval($form['start'] ?? 0);
+        $length = intval($form['length'] ?? 10);
+
+        $order = $form['order'][0]['column'] ?? 0;
+        $orderType = $form['order'][0]['dir'] ?? 'asc';
+
         $fields = [
             0 => 'id',
             1 => 'nome',
-            3 => 'descricao_curta',
-            2 => 'codigo_barra',
+            2 => 'descricao_curta',
+            3 => 'codigo_barra',
             4 => 'estoque',
-            5 => 'valor',
+            5 => 'valor'
         ];
-        #Capturamos o nome do campo a ser odernado.
-        $orderField = $fields[$order];
-        #O termo pesquisado
-        $term = $form['search']['value'];
-        
-        // Primeiro, conta o total de registros (sem filtros)
+
+        $orderField = $fields[$order] ?? 'id';
+
+        $term = $form['search']['value'] ?? '';
+
+        // TOTAL SEM FILTRO
         $totalQuery = SelectQuery::select('id')->from('view_product');
         $recordsTotal = $totalQuery->count();
-        
-        // Query com filtros para dados
+
+        // QUERY BASE
         $query = SelectQuery::select()->from('view_product');
-        if (!is_null($term) && ($term !== '')) {
+
+        if (!empty($term)) {
             $query
                 ->where('id', 'ilike', "%{$term}%")
                 ->where('nome', 'ilike', "%{$term}%", 'or')
                 ->where('descricao_curta', 'ilike', "%{$term}%", 'or')
-                ->where('codigo_barra', 'ilike', "%{$term}%", 'or')
-                ->where('valor', 'ilike', "%{$term}%", 'or');
+                ->where('codigo_barra', 'ilike', "%{$term}%", 'or');
         }
-        
-        // Conta registros filtrados
+
+        // TOTAL COM FILTRO
         $filteredQuery = clone $query;
         $recordsFiltered = $filteredQuery->count();
-        
-        // Busca os dados paginados
+
+        // DADOS PAGINADOS
         $product = $query
             ->order($orderField, $orderType)
             ->limit($length, $start)
             ->fetchAll();
-            
+
         $produtoData = [];
+
         foreach ($product as $key => $value) {
+
             $estoque = isset($value['estoque']) ? intval($value['estoque']) : 0;
+
             $produtoData[$key] = [
                 $value['id'],
                 $value['nome'],
@@ -179,27 +180,27 @@ class Produto extends Base
                 $estoque,
                 $value['valor'],
                 "<div class='d-flex gap-1'>
-    <button type='button' onclick='AdjustStock({$value['id']}, {$estoque});' class='btn btn-primary btn-sm px-2 shadow-sm' style='white-space: nowrap; font-weight: 500;'>
-        <i class='bi bi-box-seam'></i> Estoque
-    </button>
-    <a href='/produto/alterar/{$value['id']}' class='btn btn-warning btn-sm px-2 shadow-sm' style='white-space: nowrap; font-weight: 500;'>
-        <i class='bi bi-pencil-square'></i> Alterar
-    </a>
-    <button type='button' onclick='Delete({$value['id']});' class='btn btn-danger btn-sm px-2 shadow-sm' style='white-space: nowrap; font-weight: 500;'>
-        <i class='bi bi-trash-fill'></i> Excluir
-    </button>
-</div>"
+                <button type='button' onclick='AdjustStock({$value['id']}, {$estoque});' class='btn btn-primary btn-sm'>
+                    <i class='bi bi-box-seam'></i> Estoque
+                </button>
+                <a href='/produto/alterar/{$value['id']}' class='btn btn-warning btn-sm'>
+                    <i class='bi bi-pencil-square'></i>
+                </a>
+                <button type='button' onclick='Delete({$value['id']});' class='btn btn-danger btn-sm'>
+                    <i class='bi bi-trash-fill'></i>
+                </button>
+            </div>"
             ];
         }
-        $data = [
-            'status' => true,
-            'recordsTotal' => $recordsTotal,
-            'recordsFiltered' => $recordsFiltered,
-            'data' => $produtoData
-        ];
-        $payload = json_encode($data);
 
-        $response->getBody()->write($payload);
+        $data = [
+            "draw" => $draw,
+            "recordsTotal" => $recordsTotal,
+            "recordsFiltered" => $recordsFiltered,
+            "data" => $produtoData
+        ];
+
+        $response->getBody()->write(json_encode($data));
 
         return $response
             ->withHeader('Content-Type', 'application/json')
@@ -288,48 +289,47 @@ class Produto extends Base
                 ->render($response, $this->setView('reports/reportproduto'), $dadosTemplate)
                 ->withHeader('Content-Type', 'text/html')
                 ->withStatus(200);
-
         } catch (\Exception $e) {
             $response->getBody()->write("Erro ao gerar relatório: " . $e->getMessage());
             return $response->withStatus(500);
         }
     }
-    
+
     public function adjuststock($request, $response)
     {
         try {
             $form = $request->getParsedBody();
             $id = $form['id'];
             $novaQuantidade = $form['quantidade'];
-            
+
             if (is_null($id) || empty($id)) {
                 return $this->SendJson($response, ['status' => false, 'msg' => 'Por favor informe o ID do produto', 'id' => 0], 500);
             }
-            
+
             if (is_null($novaQuantidade) || $novaQuantidade === '' || $novaQuantidade < 0) {
                 return $this->SendJson($response, ['status' => false, 'msg' => 'Por favor informe uma quantidade válida', 'id' => 0], 500);
             }
-            
+
             // Buscar o estoque atual
             $produto = SelectQuery::select('id')->from('view_product')->where('id', '=', $id)->fetch();
             if (!$produto) {
                 return $this->SendJson($response, ['status' => false, 'msg' => 'Produto não encontrado', 'id' => 0], 404);
             }
-            
+
             // Buscar quantidade atual no estoque
             $estoqueAtual = SelectQuery::select('id_produto')
                 ->from('stock_movement')
                 ->where('id_produto', '=', $id)
                 ->fetchAll();
-            
+
             $quantidadeAtual = 0;
             foreach ($estoqueAtual as $mov) {
                 $quantidadeAtual += floatval($mov['quantidade_entrada'] ?? 0) - floatval($mov['quantidade_saida'] ?? 0);
             }
-            
+
             // Calcular a diferença
             $diferenca = intval($novaQuantidade) - $quantidadeAtual;
-            
+
             // Registrar a movimentação de estoque
             $FieldAndValues = [
                 'id_produto' => $id,
@@ -339,15 +339,14 @@ class Produto extends Base
                 'tipo' => $diferenca >= 0 ? 'ENTRADA' : 'SAIDA',
                 'origem_movimento' => 'AJUSTE_MANUAL'
             ];
-            
+
             $IsSave = InsertQuery::table('stock_movement')->save($FieldAndValues);
-            
+
             if (!$IsSave) {
                 return $this->SendJson($response, ['status' => false, 'msg' => 'Erro ao ajustar estoque: ' . $IsSave, 'id' => 0], 403);
             }
-            
+
             return $this->SendJson($response, ['status' => true, 'msg' => 'Estoque ajustado com sucesso!', 'id' => $id]);
-            
         } catch (\Exception $e) {
             return $this->SendJson($response, ['status' => false, 'msg' => 'Erro ao ajustar estoque: ' . $e->getMessage(), 'id' => 0], 500);
         }

@@ -32,6 +32,7 @@ function inicializarDataTable() {
             url: '/estoque/liststock',
             type: 'POST',
             data: function(d) {
+                // Adiciona os filtros personalizados
                 d.id_produto = $('#produto').val();
                 d.tipo_movimento = $('#tipo_movimento').val();
                 d.data_inicial = $('#data_inicial').val();
@@ -241,10 +242,15 @@ async function registrarEntrada() {
                 html: data.msg,
                 timer: 2000
             }).then(() => {
+                // Limpar formulário
                 $('#formEntrada')[0].reset();
                 $('#entrada_produto').val('').trigger('change');
+                
+                // Fechar modal
                 const modal = bootstrap.Modal.getInstance(document.getElementById('modalEntrada'));
                 modal.hide();
+                
+                // Recarregar tabela
                 tabela.ajax.reload();
             });
         } else {
@@ -311,11 +317,16 @@ async function registrarSaida() {
                 html: data.msg,
                 timer: 2000
             }).then(() => {
+                // Limpar formulário
                 $('#formSaida')[0].reset();
                 $('#saida_produto').val('').trigger('change');
                 $('#saida_estoque').val('');
+                
+                // Fechar modal
                 const modal = bootstrap.Modal.getInstance(document.getElementById('modalSaida'));
                 modal.hide();
+                
+                // Recarregar tabela
                 tabela.ajax.reload();
             });
         } else {
@@ -340,3 +351,4 @@ async function registrarSaida() {
 window.registrarEntrada = registrarEntrada;
 window.registrarSaida = registrarSaida;
 window.buscarEstoqueAtual = buscarEstoqueAtual;
+

@@ -60,9 +60,23 @@ class SelectQuery
             $placeholder = substr($field, strpos($field, '.') + 1);
         }
 
+        // Gera um nome único para o placeholder para evitar conflitos
+        $basePlaceholder = $placeholder;
+        $counter = 0;
+        while (isset($this->binds[$placeholder])) {
+            $counter++;
+            $placeholder = $basePlaceholder . $counter;
+        }
+
+        // Se não há WHERE ainda, não adiciona lógica
+        $logicPrefix = '';
+        if (count($this->where) > 0 && $logic !== null) {
+            $logicPrefix = ' ' . $logic . ' ';
+        }
+
         // Adiciona a cláusula WHERE ao array.
         // Formato: campo operador :placeholder lógica.
-        $this->where[] = " {$logic} {$field} {$operator} :{$placeholder}";
+        $this->where[] = "{$logicPrefix}{$field} {$operator} :{$placeholder}";
 
         // Armazena o valor no array de binds.
         $this->binds[$placeholder] = $value;

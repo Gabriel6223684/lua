@@ -96,16 +96,15 @@ class Fornecedor extends Base
     }
     public function listfornecedor($request, $response)
     {
-        #Captura todas a variaveis de forma mais segura VARIAVEIS POST.
-        $form = $request->getParsedBody();
-        #Qual a coluna da tabela deve ser ordenada.
-        $order = $form['order'][0]['column'];
-        #Tipo de ordenação
-        $orderType = $form['order'][0]['dir'];
-        #Em qual registro se inicia o retorno dos registros, OFFSET
-        $start = $form['start'];
-        #Limite de registro a serem retornados do banco de dados LIMIT
-        $length = $form['length'];
+        $form = $request->getParsedBody() ?? [];
+
+        $draw = intval($form['draw'] ?? 1);
+        $start = intval($form['start'] ?? 0);
+        $length = intval($form['length'] ?? 10);
+
+        $order = $form['order'][0]['column'] ?? 0;
+        $orderType = $form['order'][0]['dir'] ?? 'asc';
+
         $fields = [
             0 => 'id',
             1 => 'nome_fantasia',
@@ -114,65 +113,57 @@ class Fornecedor extends Base
             4 => 'rg_ie',
             5 => 'ativo',
         ];
-        #Capturamos o nome do campo a ser odernado.
-        $orderField = $fields[$order];
-        #O termo pesquisado
-        $term = $form['search']['value'];
-        
-        // Primeiro, conta o total de registros (sem filtros)
-        $totalQuery = SelectQuery::select('id')->from('supplier');
-        $recordsTotal = $totalQuery->count();
-        
-        // Query com filtros para dados
-        $query = SelectQuery::select('id,nome_fantasia,sobrenome_razao,cpf_cnpj,rg_ie,ativo')->from('supplier');
-        if (!is_null($term) && ($term !== '')) {
-            $query->where('nome_fantasia', 'ilike', "%{$term}%", 'or')
-                ->where('sobrenome_razao', 'ilike', "%{$term}%", 'or')
-                ->where('cpf_cnpj', 'ilike', "%{$term}%", 'or')
-                ->where('rg_ie', 'ilike', "%{$term}%", 'or')
-                ->where('ativo', 'ilike', "%{$term}%");
+
+        $orderField = $fields[$order] ?? 'id';
+
+        $term = $form['search']['value'] ?? '';
+
+        $recordsTotal = SelectQuery::select('COUNT(id) as total')
+            ->from('supplier')
+            ->fetch()['total'];
+
+        $query = SelectQuery::select('id,nome_fantasia,sobrenome_razao,cpf_cnpj,rg_ie,ativo')
+            ->from('supplier');
+
+        if (!empty($term)) {
+            $query
+                ->where('nome_fantasia', 'like', "%{$term}%")
+                ->where('sobrenome_razao', 'like', "%{$term}%", 'or')
+                ->where('cpf_cnpj', 'like', "%{$term}%", 'or')
+                ->where('rg_ie', 'like', "%{$term}%", 'or');
         }
-        
-        // Conta registros filtrados
-        $filteredQuery = clone $query;
-        $recordsFiltered = $filteredQuery->count();
-        
-        // Busca os dados paginados
+
         $suppliers = $query
             ->order($orderField, $orderType)
             ->limit($length, $start)
-            ->fetchAll();
-            
+            ->fetchAll() ?? [];
+
         $suppliersData = [];
-        foreach ($suppliers as $key => $value) {
-            $suppliersData[$key] = [
+
+        foreach ($suppliers as $value) {
+
+            $suppliersData[] = [
                 $value['id'],
                 $value['nome_fantasia'],
                 $value['sobrenome_razao'],
                 $value['cpf_cnpj'],
                 $value['rg_ie'],
-                $value['ativo'],
-                "<a href=\"/fornecedor/alterar/" . $value['id'] . "\" class=\"btn btn-warning\"><i class=\"fa-solid fa-pen-to-square\"></i>Alterar</a>
-
-                <button type='button'  onclick='Delete(" . $value['id'] . ");' class='btn btn-danger'>
-                 <i class=\"bi bi-trash-fill\"></i>
-                 Excluir
-                 </button>"
+                $value['ativo'] ? 'Sim' : 'Não',
+                "<a href='/fornecedor/alterar/{$value['id']}' class='btn btn-warning'>Alterar</a>
+             <button onclick='Delete({$value['id']})' class='btn btn-danger'>Excluir</button>"
             ];
         }
+
         $data = [
-            'status' => true,
-            'recordsTotal' => $recordsTotal,
-            'recordsFiltered' => $recordsFiltered,
-            'data' => $suppliersData
+            "draw" => $draw,
+            "recordsTotal" => $recordsTotal,
+            "recordsFiltered" => $recordsTotal,
+            "data" => $suppliersData
         ];
-        $payload = json_encode($data);
 
-        $response->getBody()->write($payload);
+        $response->getBody()->write(json_encode($data));
 
-        return $response
-            ->withHeader('Content-Type', 'application/json')
-            ->withStatus(200);
+        return $response->withHeader('Content-Type', 'application/json');
     }
 
     public function update($request, $response)

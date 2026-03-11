@@ -1,36 +1,47 @@
-# TODO - Completar Sistema de Vendas
+# TODO - Correção DataTables
 
-## Tarefas executadas:
+## Objetivo
+Corrigir URLs de linguagem do DataTables para versão 2.3.7
 
-### 1. Adicionar endpoint para listar todos os produtos (Produto.php)
-- [x] Criar método `listproductall` no controller Produto
-- [x] Retornar todos os produtos sem paginação
+## Tarefas
+- [x] Corrigir listestoque.js
+- [x] Corrigir listsale.js
+- [x] Corrigir listacliente.js
+- [x] Corrigir listaempresa.js
+- [x] Corrigir listafornecedor.js
+- [x] Corrigir listauser.js
+- [x] Corrigir listaproduto.js
+- [x] Corrigir listpaymentterms.js
 
-### 2. Adicionar nova rota (route.php)
-- [x] Adicionar rota POST `/produto/listproductall`
-- [x] Adicionar rota POST `/venda/updateitem`
+## Conclusão
+- [x] Todas as correções foram aplicadas
 
-### 3. Atualizar view sale.html
-- [x] Adicionar tabela de produtos no modal de pesquisa
-- [x] Adicionar campo de busca/filtragem
-- [x] Adicionar estrutura HTML necessária
-- [x] Adicionar coluna Quantidade na tabela de itens
+---
 
-### 4. Atualizar sale.js
-- [x] Implementar função para carregar produtos via AJAX
-- [x] Implementar função de filtragem/busca
-- [x] Implementar seleção de produto ao clicar
-- [x] Verificar se produto já está no carrinho antes de adicionar
-- [x] Implementar alteração de quantidade dos itens
-- [x] Criar venda sem necessidade de produto selecionado
+## Correções Adicionais no Backend
 
-### 5. Corrigir bugs no Sale.php
-- [x] Corrigir paginação na listagem de vendas
-- [x] Adicionar WHERE no método update()
-- [x] Corrigir método deleteitem()
-- [x] Adicionar método updateItem() para alterar quantidade
-- [x] Remover validação desnecessária no método insert()
-- [x] Tratar valores nulos nos totais
-- [x] Adicionar método atualizarTotaisVenda()
-- [x] Atualizar totais após inserir, atualizar e excluir itens
+### SelectQuery.php
+- Corrigido método `where()` para não adicionar lógica AND/OR na primeira condição
+- Adicionado sistema de geração de nomes únicos para placeholders (evita conflitos)
+
+### Connection.php
+- Adicionado charset UTF-8 na conexão PDO
+
+---
+
+# TODO - Sistema Profissional de Estoque
+
+## Objetivo
+Implementar sistema de estoque com entrada e saída
+
+## Tarefas
+- [x] Criar migration para view de movimentações (view_stock_movement)
+- [x] Criar controller Stock.php com endpoints
+- [x] Criar view liststock.html
+- [x] Criar JavaScript liststock.js
+- [x] Adicionar rotas no route.php
+- [x] Adicionar link no menu lateral
+
+## Conclusão
+- [x] Sistema de estoque profissional implementado
 
